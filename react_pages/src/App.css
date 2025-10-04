@@ -1,58 +1,80 @@
+body {
+  margin: 0;
+  font-family: "Poppins", "Montserrat", "Orbitron", system-ui, sans-serif;
+  background-color: #0d0d0d;
+  color: #f5f5f5;
+}
 
 #root {
   max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
-  font-family: 'Orbitron', sans-serif;
-
 }
 
-.album-browse {
-  padding: 2rem;
-  width: 100%;
-  background-color: black;
-}
-
-.album-grid {
+.title {
+  margin-top: 0.5rem;
+  margin-bottom: 2rem;
+  text-align: center;
+  font-size: 4rem;
+  font-weight: 800;
+  font-family: "Orbitron", sans-serif;
+  background: linear-gradient(90deg, #ff4d4d, #ffcc00, #00e6e6, #9d4dff, #ff4d4d);
+  background-size: 300%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gradientMove 5s linear infinite;
   display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  justify-content: flex-start;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  filter:
+    drop-shadow(0 0 5px #ff4d4d)
+    drop-shadow(0 0 10px #ffcc00)
+    drop-shadow(0 0 15px #00e6e6)
+    drop-shadow(0 0 20px #9d4dff);
 }
 
-.browse-title {
-  color: white;
-  margin-bottom: 1rem;
-  font-size: 1.5rem;
-  text-align: center;
-}
-
-.caption {
+.music-note {
   font-size: 2rem;
-  font-weight: bold;
-  color: black;
-  text-shadow: 2px 2px 6px rgba(0,0,0,2);
-  text-align: center;
+}
+
+@keyframes gradientMove {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+
+.login-buttons {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  z-index: 1000;
+}
+
+.login-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  border: none;
+  background-color: #646cff;
+  color: white;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.login-btn:hover {
+  box-shadow: 0 0 10px #646cff;
+  background-color: #5056e0;
 }
 
 .color-separation {
-  background: linear-gradient(
-    to right,
-    black 0%,
-    red 15%,
-    orange 30%,
-    yellow 45%,
-    rgb(26, 209, 26) 55%,
-    rgb(62, 62, 251) 70%,
-    rgb(125, 23, 197) 85%,
-    rgb(222, 97, 222) 95%,
-    black 100%
-  );
+  position: relative;
   width: 100%;
-  height: 200px;
+  height: 350px;
   margin-bottom: 2rem;
-
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -62,41 +84,88 @@
   align-items: center;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-.search-bar {
+.color-separation::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  padding: 0.7rem;
-  border-radius: 8px;
-  border: none;
-  margin-bottom: 1.5rem;
-  font-size: 1rem;
-  display: block;
+  height: 100%;
+  background-color: rgba(0,0,0,0.4); /* overlay */
 }
 
-/*radio buttons*/
-.search-options {
-  margin-bottom: 1rem;
+.color-separation h2 {
+  position: relative;
+  color: #ffffff; /* white text */
+  font-size: 2rem;
+  font-weight: bold;
+  text-shadow: 0 0 8px #ffffff, 0 0 15px #ffffff; /* glow */
+  text-align: center;
+}
+
+.selection-bar {
   display: flex;
-  gap: 1rem;
-  color: white;
-  font-size: 0.9rem;
   justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
-.search-options label {
+.selection-btn {
+  padding: 0.5rem 1.5rem;
+  border-radius: 999px;
+  border: none;
+  background-color: #1a1a1a;
+  color: #f5f5f5;
+  font-size: 1rem;
   cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.selection-btn:hover {
+  background-color: #333;
+}
+
+.selection-btn.active {
+  background-color: #646cff;
+  color: white;
+  box-shadow: 0 0 10px #646cff;
+}
+
+.search-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.search-input {
+  width: 100%;
+  max-width: 500px;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 999px;
+  font-size: 1rem;
+  outline: none;
+  background-color: #1a1a1a;
+  color: #f5f5f5;
+  transition: box-shadow 0.3s ease;
+}
+
+.search-input:focus {
+  box-shadow: 0 0 0 2px #646cff;
+}
+
+.album-browse {
+  padding: 2rem;
+  width: 100%;
+  background-color: black;
+}
+
+
+.album-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: flex-start;
 }
 
 /*album card*/
@@ -115,7 +184,6 @@
   transform: scale(1.05);
 }
 
-/*album cover pictures*/
 .song-card img {
   width: 100%;
   height: 200px;
@@ -133,27 +201,4 @@
   margin: 0.25rem 0 1rem 0;
   color: #555;
   font-size: 0.9rem;
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
 }

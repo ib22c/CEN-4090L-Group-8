@@ -5,8 +5,8 @@ import fleetwoodMac from "./assets/fleetwoodmac.png";
 import the1975 from "./assets/the1975.jpeg";
 import sundays from "./assets/sundays.jpg";
 import thesmiths from "./assets/theSmiths.jpg";
+import currentsAlbum from "./assets/currentsalbum.jpg";
 import './App.css';
-
 
 type Album = {
   deezer_id: string;
@@ -85,44 +85,54 @@ function AlbumBrowse() {
     }
     return true;
   });
+
   return (
     <div className="album-browse">
-      <h2 className="welcome">Welcome back, [$user]!</h2>
-      <div className="color-separation">
+      <div className="login-buttons">
+        <button className="login-btn">Log In</button>
+        <button className="login-btn">Create Account</button>
+      </div>
+
+      <h1 className="title">
+        <span className="music-note">🎵</span>
+        In Tune
+      </h1>
+
+      <div
+        className="color-separation"
+        style={{ backgroundImage: `url(${currentsAlbum})` }}
+      >
         <h2 className="caption">What are you listening to today?</h2>
       </div>
-      <h2 className="browse-title">Browse Albums</h2>
 
-      <div className="search-options">
-        <label>
-          <input type="radio" value="album" checked={searchBy === "album"} 
-          onChange={(e) => setSearchBy(e.target.value as "album")}
-          />
-          Album
-        </label>
-
-        <label>
-          <input type="radio" value="artist" checked={searchBy === "artist"} 
-          onChange={(e) => setSearchBy(e.target.value as "artist")}
-          />
-          Artist
-        </label>
-
-        <label>
-          <input type="radio" value="song" checked={searchBy === "song"} 
-          onChange={(e) => setSearchBy(e.target.value as "song")}
-          />
-          Song
-        </label>
+      <div className="selection-bar">
+        {["album", "artist", "song"].map((option) => (
+          <button
+            key={option}
+            className={`selection-btn ${searchBy === option ? "active" : ""}`}
+            onClick={() => setSearchBy(option as "album" | "artist" | "song")}
+          >
+            {option.charAt(0).toUpperCase() + option.slice(1)}
+          </button>
+        ))}
       </div>
 
-      <input
-        type="text"
-        className="search-bar"
-        placeholder="Search by album or artist..."
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-      />
+      <div className="search-container">
+        <input
+          type="text"
+          className="search-input"
+          placeholder={`Search by ${searchBy}...`}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </div>
+
+      <div className="browse-container">
+        <button className="browse-btn">
+          Browse ▼
+        </button>
+      </div>
+
       <div className="album-grid">
         {filteredAlbums.map((album) => (
           <SongCard key={album.deezer_id} {...album} />

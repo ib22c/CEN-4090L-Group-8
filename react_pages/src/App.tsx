@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { api, type Album } from './utils/api';
 import abbeyRoad from "./assets/abbeyroad.jpeg";
 import theStrokes from "./assets/isthisit.png";
 import fleetwoodMac from "./assets/fleetwoodmac.png";
@@ -7,16 +8,8 @@ import sundays from "./assets/sundays.jpg";
 import thesmiths from "./assets/theSmiths.jpg";
 import './App.css';
 
-
-type Album = {
-  deezer_id: string;
-  title: string;
-  artist_name: string;
-  cover_url: string;
-};
-
-//example albums, change later when connected
-const albums: Album[] = [
+// Keep these as fallback if API fails
+const fallbackAlbums: Album[] = [
   {
     deezer_id:"1", 
     title: "Abbey Road",
@@ -25,7 +18,7 @@ const albums: Album[] = [
   },
   {
     deezer_id:"2", 
-    title: "The Strokes",
+    title: "Is This It",
     artist_name: "The Strokes",
     cover_url: theStrokes
   },
@@ -66,9 +59,31 @@ function SongCard({ cover_url, title, artist_name }: Album) {
 }
 
 function AlbumBrowse() {
-  
+  const [albums, setAlbums] = useState<Album[]>(fallbackAlbums);
   const [query, setQuery] = useState("");
   const [searchBy, setSearchBy] = useState<"album" | "artist" | "song">("album");
+
+  // Fetch albums from API when query changes
+  useEffect(() => {
+    if (!query.trim()) {
+      setAlbums(fallbackAlbums);
+      return;
+    }
+
+    const fetchAlbums = async () => {
+      try {
+        const response = await api.searchAlbums(query);
+        setAlbums(response.results);
+      } catch (error) {
+        console.error('Error fetching albums:', error);
+        // Keep showing current albums on error
+      }
+    };
+
+    // Debounce API calls
+    const timeoutId = setTimeout(fetchAlbums, 500);
+    return () => clearTimeout(timeoutId);
+  }, [query]);
 
   const filteredAlbums = albums.filter((album) => {
     const lowerQuery = query.toLowerCase();
@@ -85,6 +100,7 @@ function AlbumBrowse() {
     }
     return true;
   });
+
   return (
     <div className="album-browse">
       <h2 className="welcome">Welcome back, [$user]!</h2>

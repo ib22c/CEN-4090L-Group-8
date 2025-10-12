@@ -11,6 +11,149 @@ body {
   padding: 2rem;
   text-align: center;
 }
+
+.box {
+  background-color: rgba(0, 0, 0, 0.6);
+  border: 2px sold #0ff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  color: #fff;
+  box-shadow: 0 0 10px #0ff;
+  margin-top: 0.5rem;
+  margin-bottom: 3rem;
+}
+
+.Header {
+  margin: 4rem;
+  margin-top: 1rem;
+}
+
+.image-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 13rem;
+  margin-bottom: 2rem;
+}
+
+.left-saved {
+  flex: 2;  
+  padding: 1rem;
+  color: #fff;
+  min-width: none;
+}
+
+.nav-button {
+  margin-bottom: 1.5rem;
+}
+
+.pfp {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #0ff;
+  box-shadow: 0 0 10px #0ff;
+}
+
+.profile-page {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  gap: 1.5rem;
+  padding: 1rem 2rem;
+}
+
+.saved {
+  flex: 1;
+  margin-top: 1.5rem;
+  min-width: 300px;
+  max-width: 500px;
+  background-color: rgba(0, 0, 0, 0.6);
+  border: 2px sold #0ff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  color: #fff;
+  box-shadow: 0 0 10px #0ff;
+  /*scrolling part css*/
+  max-height: 400px;
+  overflow-y: auto;
+  position: relative;
+}
+
+.saved::after {
+  /*for fading out*/
+  content: "";
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 50px;
+  background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.8));
+  pointer-events: none; 
+}
+
+.saved-songs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.song-list {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 0.5rem 0.8rem;  
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.song-card:hover {
+  transform: scale(1.02);
+  box-shadow: 0 0 8px #0ff;
+}
+
+.song-picture {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  object-fit: cover;
+  margin-right: 1rem;
+  flex-shrink: 0;
+}
+
+.song-info {
+  font-size: 0.75rem;
+  color: #aaa;
+  margin: 0.2rem 0 0;
+}
+
+.saved-songs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.star {
+  color: #444;
+  font-size: 1rem;
+}
+
+.star-rating {
+  display: flex;
+  gap: 0.2rem;
+  margin-top: 0.3rem;
+}
+
+.star.filled {
+  color: #0ff;
+  text-shadow: 0 0 6px #0ff;
+}
+
 /*title specs*/
 .title {
   margin-top: 0.5rem;
@@ -36,9 +179,48 @@ body {
     drop-shadow(0 0 20px #9d4dff);
 }
 
+.title-subpage {
+  position: absolute;
+  top: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 3rem;
+  font-weight: 800;
+  font-family: "Orbitron", sans-serif;
+  background-size: 300%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.title-small {
+  position: absolute;
+  margin: 20px;
+  margin-bottom: 0.5rem;
+  top: 10px;
+  left: 20px;
+  font-size: 1.2rem;
+  font-weight: 800;
+  font-family: "Orbitron", sans-serif;
+  background: linear-gradient(90deg, #ff4d4d, #ffcc00, #00e6e6, #9d4dff, #ff4d4d);
+  background-size: 300%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gradientMove 5s linear infinite;
+  gap: 0.5rem;
+  filter:
+    drop-shadow(0 0 5px #ff4d4d)
+    drop-shadow(0 0 10px #ffcc00)
+    drop-shadow(0 0 15px #00e6e6)
+    drop-shadow(0 0 20px #9d4dff);
+}
+
 .music-note {
   font-size: 2rem;
 }
+
 /*moving rainbow background*/
 @keyframes gradientMove {
   0% { background-position: 0% 50%; }
@@ -47,8 +229,8 @@ body {
 /*login and create account buttons*/
 .login-buttons {
   position: fixed;
-  top: 1rem;
-  right: 1rem;
+  top: 1.5rem;
+  right: 1.5rem;
   display: flex;
   gap: 0.5rem;
   z-index: 1000;

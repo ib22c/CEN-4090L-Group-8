@@ -28,7 +28,7 @@ export interface SearchResponse {
 }
 
 export const api = {
-  async searchAlbums(query: string, page = 1, limit = 20): Promise<SearchResponse> {
+  async searchAlbums(query: string, page = 1, limit = 5): Promise<SearchResponse> {
     const params = new URLSearchParams({
       q: query,
       page: page.toString(),

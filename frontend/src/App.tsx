@@ -8,6 +8,7 @@ import sundays from "./assets/sundays.jpg";
 import thesmiths from "./assets/theSmiths.jpg";
 import './App.css';
 
+
 // Keep these as fallback if API fails
 const fallbackAlbums: Album[] = [
   {

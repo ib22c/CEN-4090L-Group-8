@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom"
 import pfp from "./assets/pfp.jpg"
 import { albums } from "./constantAlbums.ts"
-import StarRating from "./starRating.tsx"
+import StarRating from "./StarRating.tsx"
 
 
 function ProfilePage() {

@@ -245,7 +245,7 @@ def search_albums():
         'results': display_results
     })
 
-@app.route('/v1/albums/<album_id>/select', methods=['GET'])
+@app.route('/v1/albums/<album_id>', methods=['GET'])
 def select_album(album_id):
     """
     Get full album details including tracklist when user clicks on an album.

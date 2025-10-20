@@ -43,7 +43,7 @@ export const api = {
   },
 
   async getAlbumDetails(albumId: string): Promise<AlbumDetail> {
-    const response = await fetch(`${API_BASE_URL}/v1/albums/${albumId}/select`);
+    const response = await fetch(`${API_BASE_URL}/v1/albums/${albumId}`);
     if (!response.ok) {
       throw new Error('Failed to fetch album details');
     }

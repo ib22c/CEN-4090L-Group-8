@@ -50,9 +50,9 @@ const fallbackAlbums: Album[] = [
   }
 ];
 
-function SongCard({ cover_url, title, artist_name }: Album) {
+function SongCard({ cover_url, title, artist_name, deezer_id, onAlbumClick }: Album & {onAlbumClick: (id: string) => void}) {
   return (
-    <div className="song-card">
+    <div className="song-card" onClick={() => onAlbumClick(deezer_id)} style={{cursor: 'pointer' }}>
       <img src={cover_url} alt={title} />
       <h3>{title}</h3>
       <p>{artist_name}</p>
@@ -64,6 +64,7 @@ function HomePage() {
   const [albums, setAlbums] = useState<Album[]>(fallbackAlbums);
   const [query, setQuery] = useState("");
   const [searchBy, setSearchBy] = useState<"album" | "artist" | "song">("album");
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const username = localStorage.getItem('username') || 'User';
 
@@ -81,7 +82,19 @@ function HomePage() {
     navigate('/');
   };
 
-  // Fetch albums from API when query changes
+  const handleAlbumClick = async (albumId: string) => {
+    setIsLoading(true);
+    try {
+      const albumData = await api.getAlbumDetails(albumId);
+      navigate(`/album/${albumId}`, { state: { album: albumData } });
+    } catch (error) {
+      console.error('Error fetching album details:', error);
+      alert('Failed to load album details. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!query.trim()) {
       setAlbums(fallbackAlbums);
@@ -168,7 +181,7 @@ function HomePage() {
 
       <div className="album-grid">
         {filteredAlbums.map((album) => (
-          <SongCard key={album.deezer_id} {...album} />
+          <SongCard key={album.deezer_id} {...album} onAlbumClick={handleAlbumClick} />
         ))}
       </div>
     </div>

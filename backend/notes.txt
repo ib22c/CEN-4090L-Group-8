@@ -1,1 +1,0 @@
-/v1/search/albums' we should get the deezer response and cache everything that persists for a few minutes.  once we return the minimal data needed to the user, then we save everything in the cache to the database unless it is already there.   

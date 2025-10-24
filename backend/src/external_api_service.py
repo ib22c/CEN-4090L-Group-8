@@ -5,9 +5,19 @@ from psycopg2.extras import RealDictCursor
 import atexit
 from datetime import datetime, timedelta
 from flask_cors import CORS
+#Added for login token
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-CORS(app)
+app.config["SECRET_KEY"] = "dev-change-me"        # TODO: read from env in prod
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"     # 'None' (+ HTTPS) if cross-site
+app.config["SESSION_COOKIE_SECURE"] = False       # True in HTTPS prod
+
+# Allow React dev server to send/receive cookies
+CORS(app, supports_credentials=True, resources={
+    r"/api/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173"]}
+})
 
 DB_CONFIG = {
     'dbname': 'capstonemusic',
@@ -27,6 +37,64 @@ def get_db_connection():
         cur.execute("SET search_path TO music, public;")
     conn.commit()
     return conn
+
+class UserObj(UserMixin):
+    def __init__(self, row):
+        # row is a dict with keys: user_id, user_name, user_password
+        self.id = str(row["user_id"])
+        self.user_name = row["user_name"]
+        self.password_hash = row["user_password"]
+
+def _row_to_user(row):
+    return UserObj(row) if row else None
+
+def find_user_by_username(username: str):
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT user_id, user_name, user_password
+                FROM app_user
+                WHERE lower(user_name) = lower(%s)
+                LIMIT 1
+            """, (username,))
+            row = cur.fetchone()
+            return _row_to_user(row)
+    finally:
+        conn.close()
+
+def find_user_by_id(user_id: int):
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT user_id, user_name, user_password
+                FROM app_user
+                WHERE user_id = %s
+                LIMIT 1
+            """, (user_id,))
+            row = cur.fetchone()
+            return _row_to_user(row)
+    finally:
+        conn.close()
+
+def create_user(username: str, password: str):
+    """Uses DB identity to auto-generate user_id; stores bcrypt hash."""
+    pw_hash = generate_password_hash(password)
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                INSERT INTO app_user (user_name, user_password)
+                VALUES (%s, %s)
+                RETURNING user_id, user_name, user_password
+            """, (username, pw_hash))
+            row = cur.fetchone()
+        conn.commit()
+        return _row_to_user(row)
+    finally:
+        conn.close()
+
 
 def store_search_session(key, data):
     """Store search results temporarily in memory with timestamp"""
@@ -197,6 +265,47 @@ def save_all_cache_to_db():
     print("All cached albums saved to database")
 
 atexit.register(save_all_cache_to_db) # If there are albums in the cache they will be saved to the database before Flask is closed.
+@app.post("/api/register")
+def api_register():
+    data = request.get_json(force=True)
+    username = data["username"].strip()
+    password = data["password"]
+
+    # enforce unique username (DB index helps too)
+    if find_user_by_username(username):
+        return jsonify({"error": "Username already taken"}), 409
+
+    user = create_user(username, password)
+    login_user(user, remember=True)  # persistent cookie session
+    return jsonify({"ok": True, "user": {"id": user.id, "user_name": user.user_name}})
+
+@app.post("/api/login")
+def api_login():
+    data = request.get_json(force=True)
+    username = data["username"].strip()
+    password = data["password"]
+
+    user = find_user_by_username(username)
+    if not user or not check_password_hash(user.password_hash, password):
+        return jsonify({"error": "Invalid credentials"}), 401
+
+    login_user(user, remember=True)
+    return jsonify({"ok": True})
+
+@app.post("/api/logout")
+@login_required
+def api_logout():
+    logout_user()
+    return jsonify({"ok": True})
+
+@app.get("/api/me")
+def api_me():
+    if current_user.is_authenticated:
+        return jsonify({
+            "authenticated": True,
+            "user": {"id": current_user.id, "user_name": current_user.user_name}
+        })
+    return jsonify({"authenticated": False})
 
 @app.route('/v1/search/albums', methods=['GET'])
 def search_albums():

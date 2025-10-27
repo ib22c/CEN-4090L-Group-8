@@ -6,9 +6,11 @@ import { albums, type Album } from "./constantAlbums"
 import './App.css';
 
 
-function SongCard({ cover_url, title, artist_name }: Album) {
+function SongCard({ cover_url, title, artist_name, album_id: deezer_id }: Album) {
+  const navigate = useNavigate();
+
   return (
-    <div className="song-card">
+    <div className="song-card" onClick={() => navigate(`/album/${deezer_id}`)}>
       <img src={cover_url} alt={title} />
       <h3>{title}</h3>
       <p>{artist_name}</p>
@@ -89,7 +91,7 @@ function BrowsePage() {
 
       <div className="album-grid">
         {filteredAlbums.map((album) => (
-          <SongCard key={album.deezer_id} {...album} />
+          <SongCard key={album.album_id} {...album} />
         ))}
       </div>
     </div>

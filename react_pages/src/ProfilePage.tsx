@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom"
 import pfp from "./assets/pfp.jpg"
 import { albums } from "./constantAlbums.ts"
-import StarRating from "./starRating.tsx"
+import StarRating from "./StarRating.tsx"
 
 
 function ProfilePage() {
@@ -51,7 +51,7 @@ function ProfilePage() {
                     
                     <div className="saved-songs">
                         {albums.map((album) => (
-                            <div className="song-list" key={album.deezer_id}>
+                            <div className="song-list" key={album.album_id}>
                             <img src={album.cover_url} className="song-picture"></img>
                             <div className="song-info">
                                 <h4>{album.title}</h4>

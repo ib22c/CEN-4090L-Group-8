@@ -4,14 +4,16 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import atexit
 from datetime import datetime, timedelta
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin 
 #Added for login token
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
+# --- AUTH/SESSION CONFIG (ADD) ---
 app.config["SECRET_KEY"] = "dev-change-me"        # TODO: read from env in prod
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"     # 'None' (+ HTTPS) if cross-site
+#app.config["SESSION_COOKIE_SAMESITE"] = "None"    # Ivan added this line to try make the site work
 app.config["SESSION_COOKIE_SECURE"] = False       # True in HTTPS prod
 
 # Allow React dev server to send/receive cookies
@@ -47,6 +49,16 @@ class UserObj(UserMixin):
 
 def _row_to_user(row):
     return UserObj(row) if row else None
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+
+@login_manager.user_loader
+def load_user(user_id: str):
+    try:
+        return find_user_by_id(int(user_id))
+    except Exception:
+        return None
 
 def find_user_by_username(username: str):
     conn = get_db_connection()
@@ -266,6 +278,7 @@ def save_all_cache_to_db():
 
 atexit.register(save_all_cache_to_db) # If there are albums in the cache they will be saved to the database before Flask is closed.
 @app.post("/api/register")
+@cross_origin(origins=["http://localhost:5173","http://127.0.0.1:5173"], supports_credentials=True)
 def api_register():
     data = request.get_json(force=True)
     username = data["username"].strip()
@@ -280,6 +293,7 @@ def api_register():
     return jsonify({"ok": True, "user": {"id": user.id, "user_name": user.user_name}})
 
 @app.post("/api/login")
+@cross_origin(origins=["http://localhost:5173","http://127.0.0.1:5173"], supports_credentials=True)
 def api_login():
     data = request.get_json(force=True)
     username = data["username"].strip()
@@ -293,12 +307,14 @@ def api_login():
     return jsonify({"ok": True})
 
 @app.post("/api/logout")
+@cross_origin(origins=["http://localhost:5173","http://127.0.0.1:5173"], supports_credentials=True)
 @login_required
 def api_logout():
     logout_user()
     return jsonify({"ok": True})
 
 @app.get("/api/me")
+@cross_origin(origins=["http://localhost:5173","http://127.0.0.1:5173"], supports_credentials=True)
 def api_me():
     if current_user.is_authenticated:
         return jsonify({
@@ -306,6 +322,17 @@ def api_me():
             "user": {"id": current_user.id, "user_name": current_user.user_name}
         })
     return jsonify({"authenticated": False})
+#to not have the bug that does not allow for different ports to connect
+@app.after_request
+def add_cors_headers(resp):
+    origin = request.headers.get("Origin")
+    if origin in ("http://localhost:5173", "http://127.0.0.1:5173"):
+        resp.headers["Access-Control-Allow-Origin"] = origin
+        resp.headers["Vary"] = "Origin"
+        resp.headers["Access-Control-Allow-Credentials"] = "true"
+        resp.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        resp.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS"
+    return resp
 
 @app.route('/v1/search/albums', methods=['GET'])
 def search_albums():

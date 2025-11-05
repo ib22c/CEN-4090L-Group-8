@@ -26,7 +26,7 @@ DB_CONFIG = {
     'dbname': 'capstonemusic',
     'user': 'cambender',
     'password': '123456',
-    'host': 'localhost',
+    'host': '127.0.0.1',
     'port': '5432'
 }
 
@@ -140,9 +140,20 @@ def clean_expired_cache():
     for key in expired_keys:
         del SESSION_CACHE[key]
         print(f"Cleaned up expired cache entry: {key}")
+#added to just check if it is alive
+@app.get("/api/ping")
+def api_ping():
+    return "pong", 200, {"Content-Type": "text/plain"}
 def _json_error(msg: str, code: int = 500):
     # Always return JSON on errors so the frontend can show messages
     return jsonify({"error": msg}), code
+@app.errorhandler(Exception)
+def _handle_unhandled(e):
+    # print full traceback to the Flask console
+    print("UNHANDLED EXCEPTION:\n", format_exc())
+    # return a JSON error so the browser doesn't choke on empty 500 bodies
+    return _json_error(str(e), 500)
+
 
 @app.get("/api/health")
 def api_health():
@@ -286,51 +297,75 @@ def save_all_cache_to_db():
 
 atexit.register(save_all_cache_to_db) # If there are albums in the cache they will be saved to the database before Flask is closed.
 @app.post("/api/register")
-@cross_origin(origins=["http://localhost:5173","http://127.0.0.1:5173"], supports_credentials=True)
+#@cross_origin(origins=["http://localhost:5173","http://127.0.0.1:5173"], supports_credentials=True)
 def api_register():
-    data = request.get_json(force=True)
-    username = data["username"].strip()
-    password = data["password"]
+    try:
+        data = request.get_json(force=True)
+        username = data["username"].strip()
+        password = data["password"]
 
-    # enforce unique username (DB index helps too)
-    if find_user_by_username(username):
-        return jsonify({"error": "Username already taken"}), 409
+        if not username or not password:
+            return _json_error("username and password required", 400)
 
-    user = create_user(username, password)
-    login_user(user, remember=True)  # persistent cookie session
-    return jsonify({"ok": True, "user": {"id": user.id, "user_name": user.user_name}})
+        if find_user_by_username(username):
+            return _json_error("Username already taken", 409)
+
+        user = create_user(username, password)
+        if not user:
+            return _json_error("Failed to create user", 500)
+
+        login_user(user, remember=True)
+        return jsonify({"ok": True, "user": {"id": user.id, "user_name": user.user_name}})
+    except Exception as e:
+        print("REGISTER ERROR:\n", format_exc())
+        return _json_error(f"register_failed: {e}", 500)
+
 
 @app.post("/api/login")
-@cross_origin(origins=["http://localhost:5173","http://127.0.0.1:5173"], supports_credentials=True)
 def api_login():
-    data = request.get_json(force=True)
-    username = data["username"].strip()
-    password = data["password"]
+    try:
+        data = request.get_json(force=True)
+        username = data["username"].strip()
+        password = data["password"]
 
-    user = find_user_by_username(username)
-    if not user or not check_password_hash(user.password_hash, password):
-        return jsonify({"error": "Invalid credentials"}), 401
+        if not username or not password:
+            return _json_error("username and password required", 400)
 
-    login_user(user, remember=True)
-    return jsonify({"ok": True})
+        user = find_user_by_username(username)
+        if not user or not check_password_hash(user.password_hash, password):
+            return _json_error("Invalid credentials", 401)
+
+        login_user(user, remember=True)
+        return jsonify({"ok": True})
+    except Exception as e:
+        print("LOGIN ERROR:\n", format_exc())
+        return _json_error(f"login_failed: {e}", 500)
+
 
 @app.post("/api/logout")
-@cross_origin(origins=["http://localhost:5173","http://127.0.0.1:5173"], supports_credentials=True)
 @login_required
 def api_logout():
-    logout_user()
-    return jsonify({"ok": True})
+    try:
+        logout_user()
+        return jsonify({"ok": True})
+    except Exception as e:
+        print("LOGOUT ERROR:\n", format_exc())
+        return _json_error(f"logout_failed: {e}", 500)
+
 
 @app.get("/api/me")
-@cross_origin(origins=["http://localhost:5173","http://127.0.0.1:5173"], supports_credentials=True)
 def api_me():
-    if current_user.is_authenticated:
-        return jsonify({
-            "authenticated": True,
-            "user": {"id": current_user.id, "user_name": current_user.user_name}
-        })
-    return jsonify({"authenticated": False})
-#to not have the bug that does not allow for different ports to connect
+    try:
+        if current_user.is_authenticated:
+            return jsonify({
+                "authenticated": True,
+                "user": {"id": current_user.id, "user_name": current_user.user_name}
+            })
+        return jsonify({"authenticated": False})
+    except Exception as e:
+        print("ME ERROR:\n", format_exc())
+        return _json_error(f"me_failed: {e}", 500)
+'''
 @app.after_request
 def add_cors_headers(resp):
     origin = request.headers.get("Origin")
@@ -341,7 +376,7 @@ def add_cors_headers(resp):
         resp.headers["Access-Control-Allow-Headers"] = "Content-Type"
         resp.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS"
     return resp
-
+'''
 @app.route('/v1/search/albums', methods=['GET'])
 def search_albums():
     """

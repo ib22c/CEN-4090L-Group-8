@@ -8,6 +8,7 @@ from flask_cors import CORS, cross_origin
 #Added for login token
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from traceback import format_exc
 
 app = Flask(__name__)
 # --- AUTH/SESSION CONFIG (ADD) ---
@@ -139,6 +140,13 @@ def clean_expired_cache():
     for key in expired_keys:
         del SESSION_CACHE[key]
         print(f"Cleaned up expired cache entry: {key}")
+def _json_error(msg: str, code: int = 500):
+    # Always return JSON on errors so the frontend can show messages
+    return jsonify({"error": msg}), code
+
+@app.get("/api/health")
+def api_health():
+    return jsonify({"ok": True})
 
 def fetch_deezer_albums(query, page, limit):
     """Fetch albums from Deezer API"""
@@ -423,5 +431,6 @@ def select_album(album_id):
             'error': 'Failed to fetch album tracks from Deezer'
         }), 500
 
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host="127.0.0.1", port=5000) # auto-generates HTTPS cert

@@ -1,122 +1,152 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import './App.css';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import "./App.css";
 
 function SignupPage() {
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');      // email is collected but not sent to backend (optional field)
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');  // Added state for success message
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState(""); // collected but not required by backend
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSignup = async (e: React.FormEvent) => {
+  async function handleSignup(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError('');
-    setSuccessMessage('');
+    if (loading) return;
 
-    // --- Frontend Validation ---
-    if (!username || !email || !password || !confirmPassword) {
-      setError('Please fill in all fields');
+    setError(null);
+    setSuccessMessage(null);
+
+    // Basic validation
+    if (!username.trim() || !email.trim() || !password || !confirmPassword) {
+      setError("Please fill in all fields");
       return;
     }
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError("Passwords do not match");
       return;
     }
     if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError("Password must be at least 6 characters");
       return;
     }
 
+    setLoading(true);
     try {
-      // --- API Call to Flask Backend for Registration ---
-      const response = await fetch('http://localhost:5000/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),  // backend expects username and password
-        credentials: 'include'  // include cookies in the request/response
+      // KEY: relative URL so Vite proxy -> Flask (127.0.0.1:5000)
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", // send/receive cookies
+        body: JSON.stringify({
+          username: username.trim(),
+          password,
+          // email, // include if your backend expects it
+        }),
       });
 
-      if (!response.ok) {
-        // If the server returns an error (e.g., 409 for "username taken")
-        const errorData = await response.json();
-        // Use error message from server or a generic message
-        throw new Error(errorData.error || `Server error: ${response.status}`);
-      }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data?.error || `Signup failed (${res.status})`);
+        return;
+        }
 
-      // --- Handle Successful Signup ---
-      const data = await response.json();
-      console.log('Signup successful:', data);
-      // Show a success message to the user
+      const data = await res.json();
       setSuccessMessage(`Welcome, ${data.user.user_name}! Account created.`);
-      
-      // After a short delay, redirect to the login page (so they can log in with new account)
-      setTimeout(() => {
-        navigate('/login');
-      }, 2000);
+      // Optional: verify session cookie
+      // const me = await fetch("/api/me", { credentials: "include" }).then(r => r.json());
+      // console.log("me:", me);
+
+      // Navigate after a short delay
+      setTimeout(() => navigate("/login"), 1200);
     } catch (err: any) {
-      console.error('Signup error:', err);
-      setError(err.message || 'Signup failed. Please try again.');
+      setError(err?.message || "Network error");
+    } finally {
+      setLoading(false);
     }
-  };
+  }
 
   return (
     <div className="auth-page">
       <h1 className="title-small">🎵 In Tune</h1>
       <div className="auth-container">
         <h2>Create Your Account</h2>
+
         <form onSubmit={handleSignup} className="auth-form">
-          {/* Username Field */}
           <div className="form-group">
             <label htmlFor="username">Username</label>
-            <input 
-              type="text" id="username" value={username}
+            <input
+              id="username"
+              type="text"
+              value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Choose a username" className="auth-input" 
+              placeholder="Choose a username"
+              className="auth-input"
+              autoComplete="username"
+              required
             />
           </div>
-          {/* Email Field */}
+
           <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input 
-              type="email" id="email" value={email}
+            <label htmlFor="email">Email (optional)</label>
+            <input
+              id="email"
+              type="email"
+              value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email" className="auth-input" 
+              placeholder="Enter your email"
+              className="auth-input"
+              autoComplete="email"
             />
           </div>
-          {/* Password Field */}
+
           <div className="form-group">
             <label htmlFor="password">Password</label>
-            <input 
-              type="password" id="password" value={password}
+            <input
+              id="password"
+              type="password"
+              value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Create a password" className="auth-input" 
+              placeholder="Create a password"
+              className="auth-input"
+              autoComplete="new-password"
+              required
             />
           </div>
-          {/* Confirm Password Field */}
+
           <div className="form-group">
             <label htmlFor="confirmPassword">Confirm Password</label>
-            <input 
-              type="password" id="confirmPassword" value={confirmPassword}
+            <input
+              id="confirmPassword"
+              type="password"
+              value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirm your password" className="auth-input" 
+              placeholder="Confirm your password"
+              className="auth-input"
+              autoComplete="new-password"
+              required
             />
           </div>
 
-          {/* Display error or success messages */}
-          {error && <p className="error-message">{error}</p>}
-          {successMessage && <p className="success-message">{successMessage}</p>}
+          {error && <p className="error-message">❌ {error}</p>}
+          {successMessage && <p className="success-message">✅ {successMessage}</p>}
 
-          <button type="submit" className="auth-btn">Create Account</button>
+          <button type="submit" className="auth-btn" disabled={loading}>
+            {loading ? "Creating..." : "Create Account"}
+          </button>
 
           <p className="auth-link">
             Already have an account?{" "}
-            <span onClick={() => navigate('/login')} className="link">Log in</span>
+            <span onClick={() => navigate("/login")} className="link">
+              Log in
+            </span>
           </p>
           <p className="auth-link">
-            <span onClick={() => navigate('/')} className="link">← Back to home</span>
+            <span onClick={() => navigate("/")} className="link">
+              ← Back to home
+            </span>
           </p>
         </form>
       </div>

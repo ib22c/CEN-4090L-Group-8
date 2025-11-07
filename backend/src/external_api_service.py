@@ -209,6 +209,8 @@ def get_or_create_genre(cursor, genre_id, genre_name='Unknown'):
     )
     return cursor.fetchone()[0]
 
+
+
 def save_album_to_db(album_data):
     """Save album and its songs to the database using Deezer IDs"""
     try:
@@ -217,6 +219,7 @@ def save_album_to_db(album_data):
                 deezer_album_id = int(album_data['deezer_id'])
                 deezer_artist_id = int(album_data['artist_id'])
                 deezer_genre_id = album_data.get('genre_id', 0)
+                release_date = album_data.get('release_date', None)
                 
                 author_id = get_or_create_author(
                     cur, 
@@ -243,11 +246,11 @@ def save_album_to_db(album_data):
                 
                 cur.execute(
                     """
-                    INSERT INTO album (album_id, author_id, genre_id, album_name, album_rating)
-                    VALUES (%s, %s, %s, %s, %s)
+                    INSERT INTO album (album_id, author_id, genre_id, album_name, album_rating, release_date)
+                    VALUES (%s, %s, %s, %s, %s, %s)
                     RETURNING album_id
                     """,
-                    (deezer_album_id, author_id, genre_id, album_data['title'], None)
+                    (deezer_album_id, author_id, genre_id, album_data['title'], None, release_date)
                 )
                 album_id = cur.fetchone()[0]
                 print(f"Saved album '{album_data['title']}' with ID: {album_id}")
@@ -294,6 +297,8 @@ def save_all_cache_to_db():
         for album in cache_entry['data']:
             save_album_to_db(album)
     print("All cached albums saved to database")
+
+
 
 atexit.register(save_all_cache_to_db) # If there are albums in the cache they will be saved to the database before Flask is closed.
 @app.post("/api/register")
@@ -377,6 +382,8 @@ def add_cors_headers(resp):
         resp.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS"
     return resp
 '''
+
+
 @app.route('/v1/search/albums', methods=['GET'])
 def search_albums():
     """
@@ -402,9 +409,9 @@ def search_albums():
             'artist_name': album['artist']['name'],
             'artist_id': str(album['artist']['id']),
             'cover_url': album.get('cover_medium'),
-            'release_date': album.get('release_date')
+            'release_date': None  # Will be fetched when user clicks on album
         }
-        session_data.append(full_album_data) # Store all the album information except tracklist in cache.
+        session_data.append(full_album_data)
         
         display_data = {
             'deezer_id': str(album['id']),
@@ -412,7 +419,7 @@ def search_albums():
             'artist_name': album['artist']['name'],
             'cover_url': album.get('cover_medium')
         }
-        display_results.append(display_data) # Return only what is needed for display to the user.
+        display_results.append(display_data)
     
     session_key = f"{query}:{page}"
     store_search_session(session_key, session_data)
@@ -428,7 +435,7 @@ def search_albums():
 def select_album(album_id):
     """
     Get full album details including tracklist when user clicks on an album.
-    Fetches tracks from Deezer, returns complete album data, and saves to database.
+    Fetches release_date, tracks from Deezer, and saves to database.
     """
     stored_album_data = get_from_search_session(album_id)
     if not stored_album_data:
@@ -436,6 +443,18 @@ def select_album(album_id):
             'error': 'Album not found in recent search results. Please search again.'
         }), 404
     
+    # Fetch full album details to get release_date
+    try:
+        full_album_url = f"https://api.deezer.com/album/{album_id}"
+        full_album_response = requests.get(full_album_url, timeout=10)
+        full_album_response.raise_for_status()
+        full_album = full_album_response.json()
+        release_date = full_album.get('release_date')
+        stored_album_data['release_date'] = release_date
+    except Exception as e:
+        print(f"Error fetching full album details for {album_id}: {e}")
+    
+    # Fetch tracks
     tracks_url = f"https://api.deezer.com/album/{album_id}/tracks"
     try:
         tracks_response = requests.get(tracks_url, timeout=10)
@@ -456,7 +475,7 @@ def select_album(album_id):
             'tracks': formatted_tracks
         }
         
-        save_album_to_db(complete_album) # Save the entire album with tracklist to database.  This flow can probably be improved.
+        save_album_to_db(complete_album)
         
         return jsonify(complete_album)
         

@@ -16,3 +16,5 @@ htmlcov/
 dist/
 build/
 src/notes.txt
+node_modules/
+venv/

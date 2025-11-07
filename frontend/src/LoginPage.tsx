@@ -1,91 +1,111 @@
-// src/LoginPage.tsx
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import "./App.css";
-import { api } from "./utils/api"; // <-- import your helper (adjust path if yours is src/lib/api)
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import './App.css';
 
-export default function LoginPage() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+function LoginPage() {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false); // loading phase: checking if user exists in db
   const navigate = useNavigate();
 
-  async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (loading) return;
     setError(null);
 
-    if (!username || !password) {
-      setError("Please enter both username and password");
+    // Basic validation
+    if (!username.trim() || !password.trim()) {
+      setError('Please enter both username and password');
       return;
     }
 
+    setLoading(true); // start of loading phase
+
     try {
-      // 1) Call Flask to create the session (sets HttpOnly "session" cookie)
-      await api.login(username, password);
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ username: username.trim(), password }),
+      });
 
-      // 2) Ask the server who we are (proves cookie is stored & sent)
-      const me = await api.me(); // { authenticated: true, user: { id, user_name } }
-
-      // (Optional) keep the greeting working until your UI reads from /api/me on mount
-      if (me?.authenticated && me.user?.user_name) {
-        localStorage.setItem("username", me.user.user_name);
-        localStorage.setItem("isLoggedIn", "true");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data?.error || `Login failed (${res.status})`);
+        return;
       }
 
-      // 3) Go to the app
-      navigate("/home");
-    } catch (err) {
-      console.error("Login failed:", err);
-      setError("Login failed. Please check your username and password.");
+      const data = await res.json();
+      console.log('Logging in:', data);
+      
+      // Store user info (in a real app, store auth token)
+      localStorage.setItem('username', data.user?.user_name || username);
+      localStorage.setItem('isLoggedIn', 'true');
+      
+      // Redirect to home page
+      navigate('/home');
+    } catch (err: any) {
+      setError(err?.message || 'Network error...');
+      console.error('Login error:', err);
+    } finally{
+      setLoading(false);
+      //end loading phase
     }
-  }
+  };
 
   return (
     <div className="auth-page">
-      <h1 className="title-small">🎵 In Tune</h1>
+      <h1 className="title-small">
+        🎵 In Tune
+      </h1>
 
       <div className="auth-container">
         <h2>Welcome Back!</h2>
-
         <form onSubmit={handleLogin} className="auth-form">
           <div className="form-group">
             <label htmlFor="username">Username</label>
             <input
+              type="text"
               id="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Enter your username"
               className="auth-input"
-              autoComplete="username"
+              autoComplete= "username"
+              required
             />
           </div>
 
           <div className="form-group">
             <label htmlFor="password">Password</label>
             <input
-              id="password"
               type="password"
+              id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"
               className="auth-input"
               autoComplete="current-password"
+              required
             />
           </div>
 
           {error && <p className="error-message">{error}</p>}
 
-          <button type="submit" className="auth-btn">Log In</button>
+          <button type="submit" className="auth-btn" disabled={loading}>
+            {loading ? "Logging in..." : "Log In"}
+          </button>
 
           <p className="auth-link">
-            Don&apos;t have an account?{" "}
-            <span onClick={() => navigate("/signup")} className="link">
+            Don't have an account?{' '}
+            <span onClick={() => navigate('/signup')} className="link">
               Sign up
             </span>
           </p>
 
           <p className="auth-link">
-            <span onClick={() => navigate("/")} className="link">
+            <span onClick={() => navigate('/')} className="link">
               ← Back to home
             </span>
           </p>
@@ -94,3 +114,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+export default LoginPage;

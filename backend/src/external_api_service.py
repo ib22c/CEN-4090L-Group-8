@@ -486,5 +486,57 @@ def select_album(album_id):
         }), 500
 
 
+@app.post("/v1/albums/<album_id>/add")
+@login_required
+def add_album(album_id):
+    """
+    Add album to the current user's want_to_listen list.
+    Album should already exist in DB.
+    """
+    try:
+        user_id = int(current_user.id)
+
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+
+                # Verify album exists
+                cur.execute("""
+                    SELECT album_id
+                    FROM album
+                    WHERE album_id = %s
+                    LIMIT 1
+                """, (album_id,))
+                row = cur.fetchone()
+                if not row:
+                    return _json_error("Album not found in DB", 404)
+
+                # Check if already exists
+                cur.execute("""
+                    SELECT 1
+                    FROM want_to_listen
+                    WHERE user_id = %s AND album_id = %s
+                    LIMIT 1
+                """, (user_id, album_id))
+                exists = cur.fetchone()
+
+                if exists:
+                    return jsonify({"ok": True, "message": "Album already in list"})
+
+                # Insert new
+                cur.execute("""
+                    INSERT INTO want_to_listen (user_id, album_id)
+                    VALUES (%s, %s)
+                """, (user_id, album_id))
+
+            conn.commit()
+
+        return jsonify({"ok": True, "message": "Album added to your list"})
+
+    except Exception as e:
+        print("ADD ALBUM ERROR:", e)
+        return _json_error(f"add_album_failed: {e}", 500)
+
+
+
 if __name__ == '__main__':
     app.run(debug=True, host="127.0.0.1", port=5000) # auto-generates HTTPS cert

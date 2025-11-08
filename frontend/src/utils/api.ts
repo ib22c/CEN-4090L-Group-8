@@ -65,7 +65,6 @@ export const api = {
     return request<{ ok: true }>("/api/logout", { method: "POST" });
   },
 
-  // albums
   searchAlbums(query: string, page = 1, limit = 5) {
     const params = new URLSearchParams({ q: query, page: String(page), limit: String(limit) });
     return request<SearchResponse>(`/v1/search/albums?${params.toString()}`);
@@ -73,4 +72,11 @@ export const api = {
   getAlbumDetails(albumId: string) {
     return request<AlbumDetail>(`/v1/albums/${albumId}`);
   },
+
+  addAlbum(albumId: string) {
+  return request<{ ok: boolean; message?: string }>(
+    `/v1/albums/${albumId}/add`,
+    { method: "POST" }
+  );
+},
 };

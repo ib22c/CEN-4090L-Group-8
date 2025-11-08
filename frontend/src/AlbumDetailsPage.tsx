@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import './AlbumDetailsPage.css';
+import { api } from './utils/api.ts'; 
 
 interface Track {
   id: string;
@@ -58,6 +59,17 @@ function AlbumDetailsPage() {
     }
   };
 
+  const handleAdd = async () => {
+    try {
+      await api.addAlbum(album.deezer_id);
+      alert("Album added!");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to add album");
+    }
+  };
+
+
   return (
     <div className="album-details">
       <button className="back-btn" onClick={() => navigate('/home')}>← Back</button>
@@ -68,6 +80,8 @@ function AlbumDetailsPage() {
           <p className="artist-name">{album.artist_name}</p>
           <p className="release-date">Released: {formatReleaseDate(album.release_date)}</p>
           <p className="track-count">{album.tracks.length} tracks</p>
+
+          <button onClick={handleAdd}>Add Album</button>
         </div>
       </div>
       <div className="tracklist">

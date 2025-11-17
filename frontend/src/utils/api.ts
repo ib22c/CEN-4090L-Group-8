@@ -73,6 +73,9 @@ export const api = {
     return request<AlbumDetail>(`/v1/albums/${albumId}`);
   },
 
+   getRandomAlbums(count: number = 6) {
+    return request<Album[]>(`/v1/albums/random?count=${count}`);
+  },
   addAlbum(albumId: string) {
   return request<{ ok: boolean; message?: string }>(
     `/v1/albums/${albumId}/add`,

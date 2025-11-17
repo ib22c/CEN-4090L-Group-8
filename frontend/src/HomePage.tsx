@@ -1,54 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from './utils/api';
 import type { Album } from './utils/api';
-import abbeyRoad from "./assets/abbeyroad.jpeg";
-import theStrokes from "./assets/isthisit.png";
-import fleetwoodMac from "./assets/fleetwoodmac.png";
-import the1975 from "./assets/the1975.jpeg";
-import sundays from "./assets/sundays.jpg";
-import thesmiths from "./assets/theSmiths.jpg";
 import './App.css';
-
-// Fallback albums if API fails
-const fallbackAlbums: Album[] = [
-  {
-    deezer_id: "1",
-    title: "Abbey Road",
-    artist_name: "The Beatles",
-    cover_url: abbeyRoad
-  },
-  {
-    deezer_id: "2",
-    title: "Is This It",
-    artist_name: "The Strokes",
-    cover_url: theStrokes
-  },
-  {
-    deezer_id: "3",
-    title: "Fleetwood Mac",
-    artist_name: "Fleetwood Mac",
-    cover_url: fleetwoodMac
-  },
-  {
-    deezer_id: "4",
-    title: "The Queen is Dead",
-    artist_name: "The Smiths",
-    cover_url: thesmiths
-  },
-  {
-    deezer_id: "5",
-    title: "Being Funny in a Foreign Language",
-    artist_name: "The 1975",
-    cover_url: the1975
-  },
-  {
-    deezer_id: "6",
-    title: "Static & Silence",
-    artist_name: "The Sundays",
-    cover_url: sundays
-  }
-];
 
 function SongCard({ cover_url, title, artist_name, deezer_id, onAlbumClick }: Album & {onAlbumClick: (id: string) => void}) {
   return (
@@ -61,10 +15,11 @@ function SongCard({ cover_url, title, artist_name, deezer_id, onAlbumClick }: Al
 }
 
 function HomePage() {
-  const [albums, setAlbums] = useState<Album[]>(fallbackAlbums);
+  const [albums, setAlbums] = useState<Album[]>([]);
   const [query, setQuery] = useState("");
   const [searchBy, setSearchBy] = useState<"album" | "artist" | "song">("album");
   const [isLoading, setIsLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false); // Track if user has searched
   const navigate = useNavigate();
   const username = localStorage.getItem('username') || 'User';
 
@@ -75,6 +30,25 @@ function HomePage() {
       navigate('/');
     }
   }, [navigate]);
+
+  // Fetch random albums on component mount
+  useEffect(() => {
+    const fetchRandomAlbums = async () => {
+      setIsLoading(true);
+      try {
+        const response = await api.getRandomAlbums(6);
+        if (response && response.length > 0) {
+          setAlbums(response);
+        }
+      } catch (error) {
+        console.error('Error fetching random albums:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchRandomAlbums();
+  }, []); // Empty dependency array - only runs once on mount
 
   const handleLogout = () => {
     localStorage.removeItem('username');
@@ -95,11 +69,15 @@ function HomePage() {
     }
   };
 
+  // Search functionality - only runs when user actually types something
   useEffect(() => {
+    // Don't run on initial mount or when query is empty
     if (!query.trim()) {
-      setAlbums(fallbackAlbums);
       return;
     }
+
+    // Mark that user has searched
+    setHasSearched(true);
 
     const fetchAlbums = async () => {
       try {
@@ -111,12 +89,12 @@ function HomePage() {
           setAlbums(response.results);
           console.log('Updated albums:', response.results);
         } else {
-          console.log('No results found, showing fallback albums');
-          setAlbums(fallbackAlbums);
+          console.log('No results found');
+          setAlbums([]);
         }
       } catch (error) {
         console.error('Error fetching albums:', error);
-        setAlbums(fallbackAlbums);
+        setAlbums([]);
       }
     };
 
@@ -175,17 +153,42 @@ function HomePage() {
           className="search-input"
           placeholder={`Search by ${searchBy}...`}
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            const newQuery = e.target.value;
+            setQuery(newQuery);
+            
+            // If user clears the search after having searched, fetch random albums again
+            if (!newQuery.trim() && hasSearched) {
+              setHasSearched(false);
+              const fetchRandomAlbums = async () => {
+                try {
+                  const response = await api.getRandomAlbums(6);
+                  if (response && response.length > 0) {
+                    setAlbums(response);
+                  }
+                } catch (error) {
+                  console.error('Error fetching random albums:', error);
+                }
+              };
+              fetchRandomAlbums();
+            }
+          }}
         />
       </div>
+
+      {isLoading && <div className="loading">Loading...</div>}
 
       <div className="album-grid">
         {filteredAlbums.map((album) => (
           <SongCard key={album.deezer_id} {...album} onAlbumClick={handleAlbumClick} />
         ))}
       </div>
+
+      {!isLoading && filteredAlbums.length === 0 && (
+        <div className="no-results">No albums found</div>
+      )}
     </div>
   );
 }
 
-export default HomePage;
+export default HomePage

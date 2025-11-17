@@ -209,8 +209,6 @@ def get_or_create_genre(cursor, genre_id, genre_name='Unknown'):
     )
     return cursor.fetchone()[0]
 
-
-
 def save_album_to_db(album_data):
     """Save album and its songs to the database using Deezer IDs"""
     try:
@@ -220,6 +218,7 @@ def save_album_to_db(album_data):
                 deezer_artist_id = int(album_data['artist_id'])
                 deezer_genre_id = album_data.get('genre_id', 0)
                 release_date = album_data.get('release_date', None)
+                cover_url = album_data.get('cover_url', '')
                 
                 author_id = get_or_create_author(
                     cur, 
@@ -242,18 +241,30 @@ def save_album_to_db(album_data):
                 if existing:
                     album_id = existing[0]
                     print(f"Album '{album_data['title']}' already exists with ID: {album_id}")
-                    return album_id
-                
-                cur.execute(
-                    """
-                    INSERT INTO album (album_id, author_id, genre_id, album_name, album_rating, release_date)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                    RETURNING album_id
-                    """,
-                    (deezer_album_id, author_id, genre_id, album_data['title'], None, release_date)
-                )
-                album_id = cur.fetchone()[0]
-                print(f"Saved album '{album_data['title']}' with ID: {album_id}")
+                    
+                    # Update the existing album with new data (cover_url, release_date, etc.)
+                    cur.execute(
+                        """
+                        UPDATE album 
+                        SET cover_url = COALESCE(%s, cover_url),
+                            release_date = COALESCE(%s, release_date)
+                        WHERE album_id = %s
+                        """,
+                        (cover_url, release_date, album_id)
+                    )
+                    print(f"Updated album '{album_data['title']}' with new data")
+                else:
+                    # Insert new album
+                    cur.execute(
+                        """
+                        INSERT INTO album (album_id, author_id, genre_id, album_name, album_rating, release_date, cover_url)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        RETURNING album_id
+                        """,
+                        (deezer_album_id, author_id, genre_id, album_data['title'], None, release_date, cover_url)
+                    )
+                    album_id = cur.fetchone()[0]
+                    print(f"Saved album '{album_data['title']}' with ID: {album_id}")
                 
                 if 'tracks' in album_data and album_data['tracks']:
                     for track in album_data['tracks']:
@@ -431,60 +442,165 @@ def search_albums():
         'results': display_results
     })
 
+
 @app.route('/v1/albums/<album_id>', methods=['GET'])
 def select_album(album_id):
     """
-    Get full album details including tracklist when user clicks on an album.
-    Fetches release_date, tracks from Deezer, and saves to database.
+    Get full album details including tracklist.
+    First checks database, then cache, then fetches from Deezer if needed.
+    Also fetches missing data from Deezer if database record is incomplete.
     """
-    stored_album_data = get_from_search_session(album_id)
-    if not stored_album_data:
-        return jsonify({
-            'error': 'Album not found in recent search results. Please search again.'
-        }), 404
     
-    # Fetch full album details to get release_date
-    try:
-        full_album_url = f"https://api.deezer.com/album/{album_id}"
-        full_album_response = requests.get(full_album_url, timeout=10)
-        full_album_response.raise_for_status()
-        full_album = full_album_response.json()
-        release_date = full_album.get('release_date')
-        stored_album_data['release_date'] = release_date
-    except Exception as e:
-        print(f"Error fetching full album details for {album_id}: {e}")
+    album_data = None
+    needs_deezer_fetch = False
     
-    # Fetch tracks
-    tracks_url = f"https://api.deezer.com/album/{album_id}/tracks"
+    # First, try to get album from database
     try:
-        tracks_response = requests.get(tracks_url, timeout=10)
-        tracks_response.raise_for_status()
-        tracks_data = tracks_response.json()
-        
-        formatted_tracks = []
-        for track in tracks_data.get('data', []):
-            formatted_tracks.append({
-                'id': str(track['id']),
-                'title': track['title'],
-                'duration': track['duration'],
-                'track_position': track.get('track_position', 0)
-            })
-        
-        complete_album = {
-            **stored_album_data,
-            'tracks': formatted_tracks
-        }
-        
-        save_album_to_db(complete_album)
-        
-        return jsonify(complete_album)
-        
+        with get_db_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                # Get album details
+                cur.execute("""
+                    SELECT 
+                        a.album_id as deezer_id,
+                        a.album_name as title,
+                        au.author_name as artist_name,
+                        au.author_id as artist_id,
+                        a.release_date,
+                        a.genre_id,
+                        a.cover_url
+                    FROM album a
+                    JOIN author au ON a.author_id = au.author_id
+                    WHERE a.album_id = %s
+                    LIMIT 1
+                """, (album_id,))
+                
+                album_row = cur.fetchone()
+                
+                if album_row:
+                    # Album exists in database, get its tracks
+                    cur.execute("""
+                        SELECT 
+                            song_id as id,
+                            song_name as title,
+                            0 as duration,
+                            song_num as track_position
+                        FROM song
+                        WHERE album_id = %s
+                        ORDER BY song_num
+                    """, (album_id,))
+                    
+                    tracks = cur.fetchall()
+                    
+                    # Format response
+                    album_data = {
+                        'deezer_id': str(album_row['deezer_id']),
+                        'title': album_row['title'],
+                        'artist_name': album_row['artist_name'],
+                        'artist_id': str(album_row['artist_id']),
+                        'release_date': album_row['release_date'],
+                        'cover_url': album_row['cover_url'] or '',
+                        'tracks': [dict(track) for track in tracks]
+                    }
+                    
+                    # Check if we need to fetch from Deezer (missing tracks, release_date, or cover)
+                    if not tracks or not album_row['release_date'] or not album_row['cover_url']:
+                        needs_deezer_fetch = True
+                        print(f"Album {album_id} found in DB but missing data. Will fetch from Deezer.")
+                    else:
+                        # Data is complete, return it
+                        return jsonify(album_data), 200
+    
     except Exception as e:
-        print(f"Error fetching tracks from Deezer: {e}")
-        return jsonify({
-            'error': 'Failed to fetch album tracks from Deezer'
-        }), 500
-
+        print(f"Error checking database for album {album_id}: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    # If not in database, check cache
+    if not album_data:
+        stored_album_data = get_from_search_session(album_id)
+        
+        # If not in cache either, we'll fetch from Deezer
+        if not stored_album_data:
+            needs_deezer_fetch = True
+        else:
+            album_data = stored_album_data
+            needs_deezer_fetch = True  # Always fetch tracks from Deezer
+    
+    # Fetch from Deezer if needed
+    if needs_deezer_fetch:
+        try:
+            # Fetch basic album info from Deezer if we don't have album_data yet
+            if not album_data:
+                full_album_url = f"https://api.deezer.com/album/{album_id}"
+                full_album_response = requests.get(full_album_url, timeout=10)
+                full_album_response.raise_for_status()
+                full_album = full_album_response.json()
+                
+                album_data = {
+                    'deezer_id': str(full_album['id']),
+                    'title': full_album['title'],
+                    'artist_name': full_album['artist']['name'],
+                    'artist_id': str(full_album['artist']['id']),
+                    'cover_url': full_album.get('cover_medium', ''),
+                    'release_date': full_album.get('release_date'),
+                    'genre_id': full_album.get('genre_id', 0)
+                }
+            
+            # Fetch release_date and/or cover_url if missing
+            if not album_data.get('release_date') or not album_data.get('cover_url'):
+                try:
+                    full_album_url = f"https://api.deezer.com/album/{album_id}"
+                    full_album_response = requests.get(full_album_url, timeout=10)
+                    full_album_response.raise_for_status()
+                    full_album = full_album_response.json()
+                    
+                    if not album_data.get('release_date'):
+                        album_data['release_date'] = full_album.get('release_date')
+                    if not album_data.get('cover_url'):
+                        album_data['cover_url'] = full_album.get('cover_medium', '')
+                except Exception as e:
+                    print(f"Error fetching additional album info for {album_id}: {e}")
+            
+            # Fetch tracks from Deezer
+            tracks_url = f"https://api.deezer.com/album/{album_id}/tracks"
+            tracks_response = requests.get(tracks_url, timeout=10)
+            tracks_response.raise_for_status()
+            tracks_data = tracks_response.json()
+            
+            formatted_tracks = []
+            for track in tracks_data.get('data', []):
+                formatted_tracks.append({
+                    'id': str(track['id']),
+                    'title': track['title'],
+                    'duration': track['duration'],
+                    'track_position': track.get('track_position', 0)
+                })
+            
+            album_data['tracks'] = formatted_tracks
+            
+            # Save/update in database for future use
+            save_album_to_db(album_data)
+            
+            return jsonify(album_data)
+            
+        except Exception as e:
+            print(f"Error fetching from Deezer: {e}")
+            import traceback
+            traceback.print_exc()
+            
+            # If we have partial data from database, return it anyway
+            if album_data:
+                return jsonify(album_data), 200
+            
+            return jsonify({
+                'error': 'Failed to fetch album details'
+            }), 500
+    
+    # Shouldn't reach here, but just in case
+    if album_data:
+        return jsonify(album_data), 200
+    
+    return jsonify({'error': 'Album not found'}), 404
 
 @app.post("/v1/albums/<album_id>/add")
 @login_required
@@ -536,7 +652,78 @@ def add_album(album_id):
         print("ADD ALBUM ERROR:", e)
         return _json_error(f"add_album_failed: {e}", 500)
 
+# Add this endpoint to your external_api_service.py file
 
+@app.route('/v1/albums/random', methods=['GET'])
+def get_random_albums():
+    """
+    Get random albums from the database.
+    Returns a specified number of random albums.
+    Fetches missing cover URLs from Deezer and updates the database.
+    """
+    try:
+        count = int(request.args.get('count', 6))
+        
+        with get_db_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                # Query to get random albums with their artist information
+                cur.execute("""
+                    SELECT 
+                        a.album_id as deezer_id,
+                        a.album_name as title,
+                        au.author_name as artist_name,
+                        a.cover_url
+                    FROM album a
+                    JOIN author au ON a.author_id = au.author_id
+                    ORDER BY RANDOM()
+                    LIMIT %s
+                """, (count,))
+                
+                albums = cur.fetchall()
+                
+                # Format the response and fetch missing covers
+                result = []
+                for album in albums:
+                    cover_url = album['cover_url']
+                    
+                    # If cover_url is missing, fetch it from Deezer
+                    if not cover_url:
+                        try:
+                            deezer_url = f"https://api.deezer.com/album/{album['deezer_id']}"
+                            deezer_response = requests.get(deezer_url, timeout=10)
+                            deezer_response.raise_for_status()
+                            deezer_data = deezer_response.json()
+                            cover_url = deezer_data.get('cover_medium', '')
+                            
+                            # Update the database with the new cover URL
+                            if cover_url:
+                                cur.execute("""
+                                    UPDATE album
+                                    SET cover_url = %s
+                                    WHERE album_id = %s
+                                """, (cover_url, album['deezer_id']))
+                                print(f"Updated cover for album {album['title']}")
+                        except Exception as e:
+                            print(f"Error fetching cover for album {album['deezer_id']}: {e}")
+                            cover_url = ''
+                    
+                    result.append({
+                        'deezer_id': str(album['deezer_id']),
+                        'title': album['title'],
+                        'artist_name': album['artist_name'],
+                        'cover_url': cover_url or ''
+                    })
+                
+                # Commit any cover URL updates
+                conn.commit()
+                
+                return jsonify(result), 200
+                
+    except Exception as e:
+        print(f"Error fetching random albums: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to fetch random albums'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host="127.0.0.1", port=5000) # auto-generates HTTPS cert

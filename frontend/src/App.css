@@ -187,11 +187,8 @@ body {
 }
 
 .title-small {
-  position: absolute;
-  margin: 20px;
-  margin-bottom: 0.5rem;
-  top: 10px;
-  left: 20px;
+  margin: 0;
+  flex-shrink: 0;  
   font-size: 1.2rem;
   font-weight: 800;
   font-family: "Orbitron", sans-serif;
@@ -201,7 +198,6 @@ body {
   background-clip: text;
   color: transparent;
   animation: gradientMove 5s linear infinite;
-  gap: 0.5rem;
   filter:
     drop-shadow(0 0 5px #ff4d4d)
     drop-shadow(0 0 10px #ffcc00)
@@ -585,19 +581,27 @@ body {
   color: #5056e0;
 }
 
-/* Home Page Navigation */
+
 .top-nav {
+  box-sizing: border-box; 
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 2rem;
-  margin-bottom: 2rem;
+  justify-content: space-between; 
+  align-items: center;            
+  padding: 1rem;
+  position: fixed;                
+  top: 0;
+  left: 0;
+  width: 100%;
+  background-color: #0d0d0d;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
 }
 
 .nav-right {
   display: flex;
   align-items: center;
   gap: 1rem;
+  margin-right: 10px;
 }
 
 .username-display {
@@ -625,4 +629,21 @@ body {
 .welcome-subtitle {
   font-size: 1.2rem;
   color: #aaa;
+}
+
+.change-pfp-btn {
+  margin-top: 1rem; 
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background-color: #646cff;
+  color: white;
+  cursor: pointer;
+  font-size: 0.5rem;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.change-pfp-btn:hover {
+  background-color: #5056e0;
+  box-shadow: 0 0 10px #646cff;
 }

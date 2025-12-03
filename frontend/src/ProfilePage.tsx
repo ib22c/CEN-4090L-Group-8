@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom"
+import { useState } from "react"
 import pfp from "./assets/pfp.jpg"
 import { albums } from "./constantAlbums.ts"
 import StarRating from "./StarRating.tsx"
@@ -6,6 +7,25 @@ import StarRating from "./StarRating.tsx"
 
 function ProfilePage() {
     const navigate = useNavigate();
+    const username = localStorage.getItem("username") || "User"; //putting in actual username
+    const [profilePic, setProfilePic] = useState<string>(pfp); //adding in profile pic
+
+    const handleProfilePicChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = () => {
+                setProfilePic(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleLogout = () => {
+    localStorage.removeItem('username');
+    localStorage.removeItem('isLoggedIn');
+    navigate('/');
+  };
 
     return (
         <div className="profile">
@@ -15,16 +35,33 @@ function ProfilePage() {
             <div className="Header">
                 <h2 className="title-subpage">Profile Page</h2>
             </div>
-            <div className="image-container"> 
-                <img className="pfp" src={pfp}></img>
-            </div>  
+            <div className="image-container" style={{ flexDirection: "column", alignItems: "center" }}>
+            <img className="pfp" src={profilePic} alt="Profile" />
+            
+            <label htmlFor="profilePicInput" className="change-pfp-btn">
+                Change Profile Picture
+            </label>
+            
+            <input
+                id="profilePicInput"
+                type="file"
+                style={{ display: "none" }}
+                accept="image/*"
+                onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                    const fileURL = URL.createObjectURL(e.target.files[0]);
+                    setProfilePic(fileURL);
+                }
+                }}
+            />
+            </div>
             <div>
-                <h3 className="welcome">Welcome back username!</h3>
+                <h3 className="welcome">Welcome back {username}!</h3>
             </div>
 
-            <button className="login-buttons">Logout</button>
+            <button className="login-buttons"onClick={handleLogout}>Logout</button>
 
-            <button className="nav-button, login-btn" onClick={() =>navigate("/")}>
+            <button className="nav-button, login-btn" onClick={() =>navigate("/home")}>
                 Browse more albums
             </button>
 

@@ -22,9 +22,19 @@ function ProfilePage() {
     };
 
     const handleLogout = () => {
-        localStorage.removeItem('username');
-        localStorage.removeItem('isLoggedIn');
-        navigate('/');
+        try {
+            //drop token cookie
+            await fetch("/api/logout", {
+                method: "POST",
+                credentials: "include",
+            });
+        } catch (err) {
+            console.error("Logout error:", err);
+        }
+
+        localStorage.removeItem("username");
+        localStorage.removeItem("isLoggedIn");
+        navigate("/");
     };
 
     return (

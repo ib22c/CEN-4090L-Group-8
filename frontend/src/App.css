@@ -13,14 +13,40 @@ body {
 }
 
 .box {
+  width: auto;
+  max-width: none;
+  margin: 0;
+}
+
+.friend-section {
+  margin: 0;
+  min-width: 0;
+  flex-shrink: 1;
+  max-height: 400px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; 
+  width: 90%;
+  gap: 1rem;
+}
+
+.friend-section.box,
+.quick-add.box {
+  width: 100%;
+  max-width: 320px;
+  margin: 0;
+}
+
+.box,
+.music-box,
+.saved {
   background-color: rgba(0, 0, 0, 0.6);
   border: 2px solid #0ff;
   border-radius: 12px;
   padding: 1.5rem;
   color: #fff;
   box-shadow: 0 0 10px #0ff;
-  margin-top: 0.5rem;
-  margin-bottom: 3rem;
 }
 
 .Header {
@@ -35,11 +61,22 @@ body {
   margin-bottom: 2rem;
 }
 
+.left-column {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  width: 220px;
+  flex-shrink: 0;
+  padding-right: 3rem;
+}
+
 .left-saved {
-  flex: 2;  
+  flex: 2; 
+  flex-shrink: 1; 
   padding: 1rem;
   color: #fff;
-  min-width: none;
+  min-width: 0;
+  margin: 1;
 }
 
 .nav-button {
@@ -59,18 +96,28 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  gap: 2rem;
   width: 100%;
   max-width: 1200px;
-  margin: 0 auto;
-  gap: 1.5rem;
-  padding: 1rem 2rem;
+  flex-wrap: nowrap;
+  margin: 3rem auto 0;
+}
+
+.right-column {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  flex: 1;
+  min-width: 0;
+  max-width: 800px;
+  gap: 2rem;
+  flex-wrap: nowrap;
 }
 
 .saved {
   flex: 1;
-  margin-top: 1.5rem;
-  min-width: 300px;
-  max-width: 500px;
+  flex-shrink: 1;
+  margin: 0 auto;
   background-color: rgba(0, 0, 0, 0.6);
   border: 2px solid #0ff;
   border-radius: 12px;
@@ -78,6 +125,7 @@ body {
   color: #fff;
   box-shadow: 0 0 10px #0ff;
   max-height: 400px;
+  min-width: 0;
   overflow-y: auto;
   position: relative;
 }
@@ -248,6 +296,13 @@ body {
 .login-btn.logout:hover {
   background-color: #e04444;
   box-shadow: 0 0 10px #ff4d4d;
+}
+
+.music-box {
+  margin: 0;
+  min-width: 0;
+  flex-shrink: 1;
+  flex: 1 1 0;
 }
 
 /* Background picture */
@@ -610,6 +665,15 @@ body {
   font-size: 1rem;
 }
 
+.quick-add {
+  
+  max-width: 450px;
+  width: 90%;
+  text-align: center;
+  font-size: 0.9rem;
+  margin: 0 auto;
+}
+
 .welcome-section {
   text-align: center;
   margin: 3rem 0;
@@ -632,13 +696,13 @@ body {
 }
 
 .change-pfp-btn {
-  margin-top: 1rem; 
-  padding: 0.1rem 0.5rem;
+  margin-top: 1.5rem; 
+  padding: 0.2rem 1rem;
   border-radius: 999px;
   background-color: #646cff;
   color: white;
   cursor: pointer;
-  font-size: 0.5rem;
+  font-size: 0.8rem;
   transition: all 0.3s ease;
   text-align: center;
 }

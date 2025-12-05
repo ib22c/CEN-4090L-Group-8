@@ -17,6 +17,7 @@ export interface AlbumDetail extends Album {
   release_date: string;
   tracks: Track[];
 }
+
 export interface SearchResponse {
   query: string;
   page: number;
@@ -72,7 +73,9 @@ export const api = {
   getAlbumDetails(albumId: string) {
     return request<AlbumDetail>(`/v1/albums/${albumId}`);
   },
-
+  getMyAlbums() {
+    return request<Album[]>("/v1/me/albums");
+  },
    getRandomAlbums(count: number = 6) {
     return request<Album[]>(`/v1/albums/random?count=${count}`);
   },
@@ -82,4 +85,11 @@ export const api = {
     { method: "POST" }
   );
 },
+  removeAlbum(albumId: string) {
+    return request<{ ok: boolean; message?: string }>(
+      `/v1/albums/${albumId}/remove`,
+      { method: "POST" }
+    );
+  },
+
 };

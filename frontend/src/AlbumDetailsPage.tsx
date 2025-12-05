@@ -60,14 +60,20 @@ function AlbumDetailsPage() {
   };
 
   const handleAdd = async () => {
-    try {
-      await api.addAlbum(album.deezer_id);
-      alert("Album added!");
-    } catch (err) {
-      console.error(err);
-      alert("Failed to add album");
-    }
-  };
+  try {
+    // ensure backend has this album saved in the album table
+    await api.getAlbumDetails(album.deezer_id);
+
+    // now add it to want_to_listen
+    const res = await api.addAlbum(album.deezer_id);
+
+    alert(res.message ?? "Album added!");
+  } catch (err) {
+    console.error(err);
+    alert("Failed to add album");
+  }
+};
+
 
 
   return (

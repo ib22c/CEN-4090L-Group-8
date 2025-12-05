@@ -72,6 +72,14 @@ function ProfilePage() {
         localStorage.setItem(`friends_${username}`, JSON.stringify(updated));
     };
 
+    // remove friend
+    const removeFriend = (friend: string) => {
+        const updated = friends.filter((f) => f !== friend);
+        setFriends(updated);
+        localStorage.setItem(`friends_${username}`, JSON.stringify(updated));
+    };
+
+
     //logout
     const handleLogout = async () => {
     try {
@@ -141,18 +149,19 @@ function ProfilePage() {
                         <h3>Your Friends:</h3>
                         <ul>
                             {friends.map((friend) => (
-                                <li key={friend} className="friend-hover">
-                                    {friend}
-                                    <div className="hover-box">
-                                        <strong>Liked Songs:</strong>
-                                        {friendMusic[friend]?.map((song) => (
-                                        <p key={song}>{song}</p>
-                                        ))}
-                                    </div>
+                                <li key={friend} className="friend-row">
+                                    <span>{friend}</span>
+                                    <button
+                                        className="friend-remove-btn"
+                                        onClick={() => removeFriend(friend)}
+                                    >
+                                        ×
+                                    </button>
                                 </li>
                             ))}
                         </ul>
                     </div>
+
 
                     <div className="box quick-add">
                         <h3>Search Profiles</h3>

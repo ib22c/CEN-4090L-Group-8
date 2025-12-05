@@ -667,6 +667,64 @@ def add_album(album_id):
         return _json_error(f"add_album_failed: {e}", 500)
 
 # Add this endpoint to your external_api_service.py file
+@app.post("/v1/albums/<album_id>/remove")
+@login_required
+def remove_album(album_id):
+    """
+    Remove album from the current user's want_to_listen list.
+    """
+    try:
+        user_id = int(current_user.id)
+
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    DELETE FROM want_to_listen
+                    WHERE user_id = %s AND album_id = %s
+                    """,
+                    (user_id, album_id),
+                )
+
+            conn.commit()
+
+        return jsonify({"ok": True, "message": "Album removed from your list"})
+
+    except Exception as e:
+        print("REMOVE ALBUM ERROR:", e)
+        return _json_error(f"remove_album_failed: {e}", 500)
+
+@app.get("/v1/me/albums")
+@login_required
+def get_my_albums():
+    """
+    Return all albums saved in want_to_listen for the current user.
+    """
+    try:
+        user_id = int(current_user.id)
+
+        with get_db_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("""
+                    SELECT
+                        a.album_id   AS deezer_id,
+                        a.album_name AS title,
+                        au.author_name AS artist_name,
+                        a.cover_url
+                    FROM want_to_listen w
+                    JOIN album a ON w.album_id = a.album_id
+                    JOIN author au ON a.author_id = au.author_id
+                    WHERE w.user_id = %s
+                    ORDER BY a.album_name
+                """, (user_id,))
+                rows = cur.fetchall()
+
+        # convert RealDictRow -> plain dict so it’s JSON serializable
+        return jsonify([dict(row) for row in rows]), 200
+
+    except Exception as e:
+        print("GET MY ALBUMS ERROR:", e)
+        return _json_error(f"get_my_albums_failed: {e}", 500)
 
 @app.route('/v1/albums/random', methods=['GET'])
 def get_random_albums():

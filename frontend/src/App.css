@@ -38,6 +38,17 @@ body {
   margin: 0;
 }
 
+.friend-result {
+  cursor: pointer;
+  padding: 0.3rem 0;
+  transition: 0.2s;
+}
+
+.friend-result:hover {
+  color: #0ff;
+  text-shadow: 0 0 6px #0ff;
+}
+
 .box,
 .music-box,
 .saved {
@@ -374,6 +385,17 @@ body {
   margin-bottom: 1rem;
 }
 
+.search-friends {
+  width: 85%;
+  padding: 0.4rem 0.7rem;
+  border-radius: 8px;
+  background-color: #111;
+  color: #fff;
+  border: none;
+  margin-bottom: 0.6rem;
+  text-align: center;
+}
+
 .search-input {
   width: 100%;
   max-width: 500px;
@@ -457,6 +479,28 @@ body {
   color: #aaa;
   margin-bottom: 3rem;
   line-height: 1.6;
+}
+
+.add-btn {
+  background-color: #646cff;
+  color: white;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  padding: 0.2rem 0.7rem;
+  cursor: pointer;
+  border: none;
+}
+
+
+.add-btn:hover:not([disabled]) {
+  background-color: #5056e0;
+}
+
+.add-btn[disabled] {
+  background-color: #1a1a1a;
+  color: #00e6e6;
+  cursor: auto;
+  font-weight: bold;
 }
 
 .cta-buttons {
@@ -672,6 +716,16 @@ body {
   text-align: center;
   font-size: 0.9rem;
   margin: 0 auto;
+}
+
+.quick-add-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.3rem 0.5rem;
+  background: rgba(255,255,255,0.05);
+  border-radius: 6px;
+  margin-bottom: 0.4rem;
+  border: 1px solid rgba(255,255,255,0.2);
 }
 
 .welcome-section {

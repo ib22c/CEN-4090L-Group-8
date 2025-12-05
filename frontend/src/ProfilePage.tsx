@@ -1,14 +1,51 @@
 import { useNavigate } from "react-router-dom"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import pfp from "./assets/pfp.jpg"
 import { albums } from "./constantAlbums.ts"
 import StarRating from "./StarRating.tsx"
 
+//const users for initial quick add
+const TEST_USERS = [
+    {username: "Chris"},
+    {username: "Anna"},
+    {username: "Nick"},
+    {username: "Sarah"},
+    {username: "Michael"},
+];
 
 function ProfilePage() {
     const navigate = useNavigate();
     const username = localStorage.getItem("username") || "User";
     const [profilePic, setProfilePic] = useState<string>(pfp);
+
+    //quick add + friend system ---------
+    const [searchTerm, setSearchTerm] = useState("");
+    const [allUsers, setAllUsers] = useState<string[]>([]);
+    const [friends, setFriends] = useState<string[]>([]);
+
+    //load list of users and friends
+    useEffect(() => {
+        let users = JSON.parse(localStorage.getItem("allUsers") || "[]");
+        
+        // If no users exist in localStorage use test ones:
+        if (users.length === 0) {
+            users = TEST_USERS;
+            localStorage.setItem("allUsers", JSON.stringify(TEST_USERS));
+        }
+
+        setAllUsers(users.map((u: any) => u.username));
+
+        const currentFriends = JSON.parse(localStorage.getItem(`friends_${username}`) || "[]");
+        setFriends(currentFriends);
+    }, [username]);
+
+    //filter results (not you or already friends)
+    const filteredUsers = allUsers.filter(
+        (u) =>
+            u.toLowerCase().includes(searchTerm.toLowerCase()) &&
+            u !== username &&
+            !friends.includes(u)
+    );
 
     const handleProfilePicChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -20,7 +57,14 @@ function ProfilePage() {
             reader.readAsDataURL(file);
         }
     };
+    //add friend
+    const addFriend = (friend: string) => {
+        const updated = [...friends, friend];
+        setFriends(updated);
+        localStorage.setItem(`friends_${username}`, JSON.stringify(updated));
+    };
 
+    //logout
     const handleLogout = async () => {
     try {
         const res = await fetch("/api/logout", {
@@ -89,18 +133,42 @@ function ProfilePage() {
                     <div className="box friend-section">
                         <h3>Your Friends:</h3>
                         <ul>
-                            <li>Chris</li>
-                            <li>Anna</li>
-                            <li>Nick</li>
+                            {friends.map((friend) => (
+                                <li key={friend}>{friend}</li>
+                            ))}
                         </ul>
                     </div>
 
                     <div className="box quick-add">
-                        <h3>Quick Add</h3>
-                        <ul>
-                            <li>New possible friend</li>
-                            <li>New possible friend2</li>
-                            <li>New possible friend3</li>
+                        <h3>Search Profiles</h3>
+                        <input
+                            type="text"
+                            className="search-friends"
+                            placeholder="Search users..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                        <ul className="quick-add-list">
+                        {searchTerm && filteredUsers.length === 0 && (
+                            <li className="empty-result">No matches found</li>
+                        )}
+
+                        {filteredUsers.map((u) => (
+                            <li key={u} className="quick-add-item">
+                            <span>{u}</span>
+                            <button
+                                className="add-btn"
+                                disabled={friends.includes(u)}
+                                onClick={() => {
+                                if (!friends.includes(u)) {
+                                    setFriends([...friends, u]);
+                                }
+                                }}
+                            >
+                                {friends.includes(u) ? "Friend added!" : "Add"}
+                            </button>
+                            </li>
+                        ))}
                         </ul>
                     </div>
                 </div>

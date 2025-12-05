@@ -1,5 +1,5 @@
 import requests
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, session
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import atexit
@@ -362,8 +362,22 @@ def api_login():
 @login_required
 def api_logout():
     try:
+        # Tell flask-login to forget the user
         logout_user()
-        return jsonify({"ok": True})
+
+        # Clear any extra stuff in the Flask session
+        session.clear()
+
+        # Build a response so we can explicitly clear cookies
+        resp = jsonify({"ok": True})
+
+        # Explicitly clear the remember-me cookie
+        resp.delete_cookie("remember_token", path="/")
+
+        # Optional: also clear the Flask session cookie itself
+        resp.delete_cookie(app.session_cookie_name, path="/")
+
+        return resp
     except Exception as e:
         print("LOGOUT ERROR:\n", format_exc())
         return _json_error(f"logout_failed: {e}", 500)

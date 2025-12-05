@@ -21,21 +21,28 @@ function ProfilePage() {
         }
     };
 
-    const handleLogout = () => {
-        try {
-            //drop token cookie
-            await fetch("/api/logout", {
-                method: "POST",
-                credentials: "include",
-            });
-        } catch (err) {
-            console.error("Logout error:", err);
-        }
+    const handleLogout = async () => {
+    try {
+        const res = await fetch("/api/logout", {
+            method: "POST",
+            credentials: "include",
+        });
 
-        localStorage.removeItem("username");
-        localStorage.removeItem("isLoggedIn");
-        navigate("/");
-    };
+        if (!res.ok) {
+            console.error("Logout failed, status:", res.status);
+            // optional: show a toast / alert here
+        }
+    } catch (err) {
+        console.error("Logout error:", err);
+    }
+
+    // Clear client-side auth state no matter what
+    localStorage.removeItem("username");
+    localStorage.removeItem("isLoggedIn");
+
+    navigate("/");
+};
+
 
     return (
         <div className="profile">

@@ -13,6 +13,14 @@ const TEST_USERS = [
     {username: "Michael"},
 ];
 
+const friendMusic: Record<string, string[]> = {
+    Chris: ["Life Goes On", "Landslide", "See You Again"],
+    Anna: ["Slide", "Selfless", "Spellbound"],
+    Nick: ["California Dreamin'", "Sympathy"],
+    Sarah: ["Black Balloon", "Let Down"],
+    Michael: ["Purple", "Sienna"],
+};
+
 function ProfilePage() {
     const navigate = useNavigate();
     const username = localStorage.getItem("username") || "User";
@@ -122,7 +130,6 @@ function ProfilePage() {
 
             <button className="login-buttons" onClick={handleLogout}>Logout</button>
 
-            {/* FIXED className — no comma */}
             <button className="nav-button login-btn" onClick={() => navigate("/home")}>
                 Browse more albums
             </button>
@@ -134,7 +141,15 @@ function ProfilePage() {
                         <h3>Your Friends:</h3>
                         <ul>
                             {friends.map((friend) => (
-                                <li key={friend}>{friend}</li>
+                                <li key={friend} className="friend-hover">
+                                    {friend}
+                                    <div className="hover-box">
+                                        <strong>Liked Songs:</strong>
+                                        {friendMusic[friend]?.map((song) => (
+                                        <p key={song}>{song}</p>
+                                        ))}
+                                    </div>
+                                </li>
                             ))}
                         </ul>
                     </div>
@@ -149,26 +164,24 @@ function ProfilePage() {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                         <ul className="quick-add-list">
-                        {searchTerm && filteredUsers.length === 0 && (
-                            <li className="empty-result">No matches found</li>
-                        )}
+                            {!searchTerm && <li className="search-prompt">Start typing to search users…</li>}
 
-                        {filteredUsers.map((u) => (
+                            {searchTerm && filteredUsers.length === 0 && (
+                            <li className="empty-result">No matches found</li>
+                            )}
+
+                            {searchTerm && filteredUsers.map((u) => (
                             <li key={u} className="quick-add-item">
-                            <span>{u}</span>
-                            <button
+                                <span>{u}</span>
+                                <button
                                 className="add-btn"
                                 disabled={friends.includes(u)}
-                                onClick={() => {
-                                if (!friends.includes(u)) {
-                                    setFriends([...friends, u]);
-                                }
-                                }}
-                            >
-                                {friends.includes(u) ? "Friend added!" : "Add"}
-                            </button>
+                                onClick={() => addFriend(u)}
+                                >
+                                {friends.includes(u) ? "Friend Added!" : "Add Friend"}
+                                </button>
                             </li>
-                        ))}
+                            ))}
                         </ul>
                     </div>
                 </div>

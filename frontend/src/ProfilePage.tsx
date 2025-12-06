@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import pfp from "./assets/pfp.jpg";
 import { api } from "./utils/api";       // runtime value
 import type { Album } from "./utils/api"; // TS type only
+//import StarRating from "./StarRating.tsx";
 
 // const users for initial quick add
 const TEST_USERS = [
@@ -23,6 +24,7 @@ function ProfilePage() {
   const [allUsers, setAllUsers] = useState<string[]>([]);
   const [friends, setFriends] = useState<string[]>([]);
   const [userAlbums, setUserAlbums] = useState<Album[]>([]);
+  //const [ratedAlbums, setRatedAlbums] = useState<Album[]>([]);
 
   // load list of users, friends, and albums
   useEffect(() => {
@@ -90,6 +92,10 @@ function ProfilePage() {
     } catch (err) {
       console.error("Failed to remove album", err);
     }
+  };
+  //TODO? removeRating API call
+  const handleRemoveRating = async (albumId: string) => {
+
   };
 
   // logout
@@ -209,6 +215,40 @@ function ProfilePage() {
 
         {/* RIGHT COLUMN – saved albums */}
         <div className="right-column">
+        {/* rated albums section -- uncomment later */}
+        {/*
+        <div className="music-box">
+            <h3>Your Rated Albums</h3>
+            <div className="saved-songs">
+              {ratedAlbums.length === 0 && (
+                <p>
+                  You haven&apos;t rated any albums yet. Browse and rate some albums!
+                </p>
+              )}
+
+              {ratedAlbums.map((album) => (
+                <div className="song-list" key={`rated-${album.deezer_id}`}>
+                  <img
+                    src={album.cover_url}
+                    className="song-picture"
+                    alt={album.title}
+                  />
+                  <div className="song-info">
+                    <h4>{album.title}</h4>
+                    <p>{album.artist_name}</p>
+                    <StarRating rating={album.rating || 0} />
+                  </div>
+                  <button
+                    className="album-remove-btn"
+                    onClick={() => handleRemoveRating(album.deezer_id)}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+          */}
           <div className="music-box">
             <h3>Your Saved Albums</h3>
             <div className="saved-songs">

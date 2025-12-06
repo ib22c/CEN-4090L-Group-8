@@ -90,3 +90,17 @@ td {
 tbody tr:hover {
   background-color: #f9f9f9;
 }
+
+button.added {
+  background-color: #4caf50;
+  cursor: default;
+  opacity: 0.8;
+}
+
+button.added:hover {
+  background-color: #4caf50;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}

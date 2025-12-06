@@ -797,5 +797,141 @@ def get_random_albums():
         traceback.print_exc()
         return jsonify({'error': 'Failed to fetch random albums'}), 500
 
+
+@app.post("/v1/albums/<album_id>/rate")
+@login_required
+def rate_album(album_id):
+    try:
+        user_id = int(current_user.id)
+        data = request.get_json(force=True)
+        rating = data.get("rating")
+        
+        if not rating or not isinstance(rating, (int, float)):
+            return _json_error("Rating is required and must be a number", 400)
+        
+        if rating < 1 or rating > 5:
+            return _json_error("Rating must be between 1 and 5", 400)
+
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT album_id
+                    FROM album
+                    WHERE album_id = %s
+                    LIMIT 1
+                """, (album_id,))
+                row = cur.fetchone()
+                if not row:
+                    return _json_error("Album not found in DB", 404)
+
+                cur.execute("""
+                    SELECT user_rating
+                    FROM user_rating
+                    WHERE user_id = %s AND album_id = %s
+                    LIMIT 1
+                """, (user_id, album_id))
+                exists = cur.fetchone()
+
+                if exists:
+                    cur.execute("""
+                        UPDATE user_rating
+                        SET user_rating = %s
+                        WHERE user_id = %s AND album_id = %s
+                    """, (rating, user_id, album_id))
+                    message = "Rating updated"
+                else:
+                    cur.execute("""
+                        INSERT INTO user_rating (user_id, album_id, user_rating)
+                        VALUES (%s, %s, %s)
+                    """, (user_id, album_id, rating))
+                    message = "Rating saved"
+
+            conn.commit()
+
+        return jsonify({"ok": True, "message": message})
+
+    except Exception as e:
+        print("RATE ALBUM ERROR:", e)
+        return _json_error(f"rate_album_failed: {e}", 500)
+
+
+@app.get("/v1/albums/<album_id>/rating")
+@login_required
+def get_user_rating(album_id):
+    try:
+        user_id = int(current_user.id)
+
+        with get_db_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("""
+                    SELECT user_rating
+                    FROM user_rating
+                    WHERE user_id = %s AND album_id = %s
+                    LIMIT 1
+                """, (user_id, album_id))
+                row = cur.fetchone()
+
+        if row:
+            return jsonify({"rating": row["user_rating"]}), 200
+        else:
+            return jsonify({"rating": None}), 200
+
+    except Exception as e:
+        print("GET USER RATING ERROR:", e)
+        return _json_error(f"get_rating_failed: {e}", 500)
+
+
+@app.get("/v1/me/rated-albums")
+@login_required
+def get_rated_albums():
+    try:
+        user_id = int(current_user.id)
+
+        with get_db_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("""
+                    SELECT
+                        a.album_id   AS deezer_id,
+                        a.album_name AS title,
+                        au.author_name AS artist_name,
+                        a.cover_url,
+                        ur.user_rating AS rating
+                    FROM user_rating ur
+                    JOIN album a ON ur.album_id = a.album_id
+                    JOIN author au ON a.author_id = au.author_id
+                    WHERE ur.user_id = %s
+                    ORDER BY ur.user_rating DESC, a.album_name
+                """, (user_id,))
+                rows = cur.fetchall()
+
+        return jsonify([dict(row) for row in rows]), 200
+
+    except Exception as e:
+        print("GET RATED ALBUMS ERROR:", e)
+        return _json_error(f"get_rated_albums_failed: {e}", 500)
+
+
+@app.delete("/v1/albums/<album_id>/rating")
+@login_required
+def remove_rating(album_id):
+    try:
+        user_id = int(current_user.id)
+
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    DELETE FROM user_rating
+                    WHERE user_id = %s AND album_id = %s
+                """, (user_id, album_id))
+
+            conn.commit()
+
+        return jsonify({"ok": True, "message": "Rating removed"})
+
+    except Exception as e:
+        print("REMOVE RATING ERROR:", e)
+        return _json_error(f"remove_rating_failed: {e}", 500)
+
+
 if __name__ == '__main__':
     app.run(debug=True, host="127.0.0.1", port=5000) # auto-generates HTTPS cert

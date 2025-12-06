@@ -1,10 +1,9 @@
-// src/lib/api.ts
-
 export interface Album {
   deezer_id: string;
   title: string;
   artist_name: string;
   cover_url: string;
+  rating?: number;
 }
 export interface Track {
   id: string;
@@ -25,14 +24,13 @@ export interface SearchResponse {
   results: Album[];
 }
 
-// --- Single fetch helper: always sends/receives cookies ---
 export async function request<T = unknown>(
   path: string,
   init: RequestInit & { json?: unknown } = {}
 ): Promise<T> {
   const { json, headers, ...rest } = init;
   const res = await fetch(path, {
-    credentials: "include", // REQUIRED for Flask session cookie
+    credentials: "include",
     headers: { "Content-Type": "application/json", ...(headers || {}) },
     body: json !== undefined ? JSON.stringify(json) : (rest as RequestInit).body,
     ...rest,
@@ -45,9 +43,7 @@ export async function request<T = unknown>(
   return (res.status === 204 ? (undefined as T) : ((await res.json()) as T));
 }
 
-// --- High-level API methods (RELATIVE PATHS ONLY) ---
 export const api = {
-  // auth
   login(username: string, password: string) {
     return request<{ ok: true }>("/api/login", { method: "POST", json: { username, password } });
   },
@@ -76,20 +72,37 @@ export const api = {
   getMyAlbums() {
     return request<Album[]>("/v1/me/albums");
   },
-   getRandomAlbums(count: number = 6) {
+  getRandomAlbums(count: number = 6) {
     return request<Album[]>(`/v1/albums/random?count=${count}`);
   },
   addAlbum(albumId: string) {
-  return request<{ ok: boolean; message?: string }>(
-    `/v1/albums/${albumId}/add`,
-    { method: "POST" }
-  );
-},
+    return request<{ ok: boolean; message?: string }>(
+      `/v1/albums/${albumId}/add`,
+      { method: "POST" }
+    );
+  },
   removeAlbum(albumId: string) {
     return request<{ ok: boolean; message?: string }>(
       `/v1/albums/${albumId}/remove`,
       { method: "POST" }
     );
   },
-
+  rateAlbum(albumId: string, rating: number) {
+    return request<{ ok: boolean; message?: string }>(
+      `/v1/albums/${albumId}/rate`,
+      { method: "POST", json: { rating } }
+    );
+  },
+  getUserRating(albumId: string) {
+    return request<{ rating: number | null }>(`/v1/albums/${albumId}/rating`);
+  },
+  getRatedAlbums() {
+    return request<Album[]>("/v1/me/rated-albums");
+  },
+  removeRating(albumId: string) {
+    return request<{ ok: boolean; message?: string }>(
+      `/v1/albums/${albumId}/rating`,
+      { method: "DELETE" }
+    );
+  },
 };

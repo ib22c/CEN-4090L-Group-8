@@ -791,3 +791,23 @@ body {
   background-color: #5056e0;
   box-shadow: 0 0 10px #646cff;
 }
+
+.star-display {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.star-filled,
+.star-empty {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.star-filled {
+  color: #ffc107;
+}
+
+.star-empty {
+  color: #ddd;
+}

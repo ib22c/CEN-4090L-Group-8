@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import './AlbumDetailsPage.css';
-import { api } from './utils/api.ts'; 
+import { api } from './utils/api.ts';
 
 interface Track {
   id: string;
@@ -23,10 +24,39 @@ function AlbumDetailsPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const album = location.state?.album as AlbumDetail;
-  console.log('Album data received:', album);
-  console.log('Release date value:', album?.release_date);
-  console.log('Release date type:', typeof album?.release_date);
+  
+  const [userRating, setUserRating] = useState<number>(0);
+  const [hoverRating, setHoverRating] = useState<number>(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAlbumAdded, setIsAlbumAdded] = useState(false);
 
+  useEffect(() => {
+    if (album) {
+      fetchUserRating();
+      checkIfAlbumAdded();
+    }
+  }, [album]);
+
+  const fetchUserRating = async () => {
+    try {
+      const response = await api.getUserRating(album.deezer_id);
+      if (response.rating) {
+        setUserRating(response.rating);
+      }
+    } catch (err) {
+      console.error('Error fetching rating:', err);
+    }
+  };
+
+  const checkIfAlbumAdded = async () => {
+    try {
+      const albums = await api.getMyAlbums();
+      const isAdded = albums.some(a => a.deezer_id === album.deezer_id);
+      setIsAlbumAdded(isAdded);
+    } catch (err) {
+      console.error('Error checking album status:', err);
+    }
+  };
 
   if (!album) {
     return (
@@ -49,10 +79,10 @@ function AlbumDetailsPage() {
       const [year, month, day] = dateString.split('-');
       if (!year || !month || !day) return dateString;
       const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      return date.toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
       });
     } catch {
       return dateString || 'Unknown';
@@ -60,25 +90,59 @@ function AlbumDetailsPage() {
   };
 
   const handleAdd = async () => {
-  try {
-    // ensure backend has this album saved in the album table
-    await api.getAlbumDetails(album.deezer_id);
+    try {
+      await api.getAlbumDetails(album.deezer_id);
+      await api.addAlbum(album.deezer_id);
+      setIsAlbumAdded(true);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
-    // now add it to want_to_listen
-    const res = await api.addAlbum(album.deezer_id);
+  const handleRatingClick = async (rating: number) => {
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
+    try {
+      await api.getAlbumDetails(album.deezer_id);
+      await api.rateAlbum(album.deezer_id, rating);
+      setUserRating(rating);
+    } catch (err) {
+      console.error('Error submitting rating:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-    alert(res.message ?? "Album added!");
-  } catch (err) {
-    console.error(err);
-    alert("Failed to add album");
-  }
-};
-
-
+  const renderStars = () => {
+    return (
+      <div className="star-rating">
+        <p className="rating-label">Rate this album:</p>
+        <div className="stars">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <button
+              key={star}
+              className={`star ${star <= (hoverRating || userRating) ? 'filled' : ''}`}
+              onMouseEnter={() => setHoverRating(star)}
+              onMouseLeave={() => setHoverRating(0)}
+              onClick={() => handleRatingClick(star)}
+              disabled={isSubmitting}
+            >
+              ★
+            </button>
+          ))}
+        </div>
+        {userRating > 0 && (
+          <p className="rating-text">Your rating: {userRating} stars</p>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="album-details">
       <button className="back-btn" onClick={() => navigate('/home')}>← Back</button>
+      
       <div className="album-header">
         <img src={album.cover_url} alt={album.title} className="album-cover" />
         <div className="album-info">
@@ -86,10 +150,19 @@ function AlbumDetailsPage() {
           <p className="artist-name">{album.artist_name}</p>
           <p className="release-date">Released: {formatReleaseDate(album.release_date)}</p>
           <p className="track-count">{album.tracks.length} tracks</p>
-
-          <button onClick={handleAdd}>Add Album</button>
+          
+          {renderStars()}
+          
+          <button 
+            onClick={handleAdd} 
+            disabled={isAlbumAdded}
+            className={isAlbumAdded ? 'added' : ''}
+          >
+            {isAlbumAdded ? '✓ Added' : 'Add Album'}
+          </button>
         </div>
       </div>
+
       <div className="tracklist">
         <h2>Tracks</h2>
         <table>

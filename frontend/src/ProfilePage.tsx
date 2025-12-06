@@ -1,11 +1,9 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import pfp from "./assets/pfp.jpg";
-import { api } from "./utils/api";       // runtime value
-import type { Album } from "./utils/api"; // TS type only
-//import StarRating from "./StarRating.tsx";
+import { api } from "./utils/api";
+import type { Album } from "./utils/api";
 
-// const users for initial quick add
 const TEST_USERS = [
   { username: "Chris" },
   { username: "Anna" },
@@ -19,18 +17,15 @@ function ProfilePage() {
   const username = localStorage.getItem("username") || "User";
   const [profilePic, setProfilePic] = useState<string>(pfp);
 
-  // quick add + friend system ---------
   const [searchTerm, setSearchTerm] = useState("");
   const [allUsers, setAllUsers] = useState<string[]>([]);
   const [friends, setFriends] = useState<string[]>([]);
   const [userAlbums, setUserAlbums] = useState<Album[]>([]);
-  //const [ratedAlbums, setRatedAlbums] = useState<Album[]>([]);
+  const [ratedAlbums, setRatedAlbums] = useState<Album[]>([]);
 
-  // load list of users, friends, and albums
   useEffect(() => {
     let users = JSON.parse(localStorage.getItem("allUsers") || "[]");
 
-    // If no users exist in localStorage use test ones:
     if (users.length === 0) {
       users = TEST_USERS;
       localStorage.setItem("allUsers", JSON.stringify(TEST_USERS));
@@ -49,9 +44,15 @@ function ProfilePage() {
       .catch((err) => {
         console.error("Failed to load user albums", err);
       });
+
+    api
+      .getRatedAlbums()
+      .then((albums) => setRatedAlbums(albums))
+      .catch((err) => {
+        console.error("Failed to load rated albums", err);
+      });
   }, [username]);
 
-  // filter results (not you or already friends)
   const filteredUsers = allUsers.filter(
     (u) =>
       u.toLowerCase().includes(searchTerm.toLowerCase()) &&
@@ -70,21 +71,18 @@ function ProfilePage() {
     }
   };
 
-  // add friend
   const addFriend = (friend: string) => {
     const updated = [...friends, friend];
     setFriends(updated);
     localStorage.setItem(`friends_${username}`, JSON.stringify(updated));
   };
 
-  // remove friend
   const removeFriend = (friend: string) => {
     const updated = friends.filter((f) => f !== friend);
     setFriends(updated);
     localStorage.setItem(`friends_${username}`, JSON.stringify(updated));
   };
 
-  // remove album (X button)
   const handleRemoveAlbum = async (albumId: string) => {
     try {
       await api.removeAlbum(albumId);
@@ -93,12 +91,16 @@ function ProfilePage() {
       console.error("Failed to remove album", err);
     }
   };
-  //TODO? removeRating API call
-  const handleRemoveRating = async (albumId: string) => {
 
+  const handleRemoveRating = async (albumId: string) => {
+    try {
+      await api.removeRating(albumId);
+      setRatedAlbums((prev) => prev.filter((a) => a.deezer_id !== albumId));
+    } catch (err) {
+      console.error("Failed to remove rating", err);
+    }
   };
 
-  // logout
   const handleLogout = async () => {
     try {
       const res = await fetch("/api/logout", {
@@ -116,6 +118,18 @@ function ProfilePage() {
     localStorage.removeItem("username");
     localStorage.removeItem("isLoggedIn");
     navigate("/");
+  };
+
+  const renderStars = (rating: number) => {
+    return (
+      <div className="star-display">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <span key={star} className={star <= rating ? "star-filled" : "star-empty"}>
+            ★
+          </span>
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -159,7 +173,6 @@ function ProfilePage() {
       </button>
 
       <div className="profile-page">
-        {/* LEFT COLUMN – friends + search */}
         <div className="left-column">
           <div className="box friend-section">
             <h3>Your Friends:</h3>
@@ -213,11 +226,8 @@ function ProfilePage() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN – saved albums */}
         <div className="right-column">
-        {/* rated albums section -- uncomment later */}
-        {/*
-        <div className="music-box">
+          <div className="music-box">
             <h3>Your Rated Albums</h3>
             <div className="saved-songs">
               {ratedAlbums.length === 0 && (
@@ -236,7 +246,7 @@ function ProfilePage() {
                   <div className="song-info">
                     <h4>{album.title}</h4>
                     <p>{album.artist_name}</p>
-                    <StarRating rating={album.rating || 0} />
+                    {renderStars(album.rating || 0)}
                   </div>
                   <button
                     className="album-remove-btn"
@@ -248,7 +258,7 @@ function ProfilePage() {
               ))}
             </div>
           </div>
-          */}
+
           <div className="music-box">
             <h3>Your Saved Albums</h3>
             <div className="saved-songs">
